@@ -369,7 +369,9 @@ function TableSkeleton({ rows = 4, cols = 4 }: { rows?: number; cols?: number })
 }
 
 /* ── Dashboard Page ── */
-export default function DashboardPage() {
+import { RoleGate } from '@/shared/components/auth/RoleGate';
+
+function DashboardContent() {
   const { data, isLoading } = useQuery<{ success: boolean; data: DashboardData }>({
     queryKey: ['dashboard'],
     queryFn: async () => {
@@ -754,5 +756,13 @@ export default function DashboardPage() {
         </Paper>
       </motion.div>
     </Stack>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary', 'teacher', 'curator', 'specialist']}>
+      <DashboardContent />
+    </RoleGate>
   );
 }
