@@ -35,8 +35,13 @@ export async function GET(request: NextRequest) {
           where: { userId },
           select: { children: { select: { student: { select: { classId: true } } } } },
         });
-        const classIds = (parent?.children.map((c) => c.student.classId).filter(Boolean) ?? []) as string[];
-        where.classId = { in: classIds };
+        const childClassIds = (parent?.children.map((c) => c.student.classId).filter(Boolean) ?? []) as string[];
+        // If parent specified a classId and it belongs to one of their children — use it
+        if (classId && childClassIds.includes(classId)) {
+          where.classId = classId;
+        } else {
+          where.classId = { in: childClassIds };
+        }
       } else {
         return errorResponse('FORBIDDEN', 'Нет доступа', 403);
       }
