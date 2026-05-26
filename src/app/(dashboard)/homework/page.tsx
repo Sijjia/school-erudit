@@ -65,8 +65,15 @@ export default function HomeworkPage() {
   const isStaff = me && STAFF_ROLES.includes(me.role);
   const isTeacher = me && ['teacher', 'curator', 'zavuch', 'super_admin'].includes(me.role);
 
+  const isParent = me?.role === 'parent';
+  const [parentChildId, setParentChildId] = useState<string | null>(null);
+
   // Auto-filter for students/parents
-  const autoClassId = me?.student?.classId ?? me?.children?.[0]?.classId ?? null;
+  const activeChild = isParent
+    ? me?.children?.find((c) => c.studentId === parentChildId) ?? me?.children?.[0]
+    : null;
+  const autoClassId = me?.student?.classId ?? activeChild?.classId ?? null;
+  const activeChildName = activeChild ? `${activeChild.lastName} ${activeChild.firstName}` : null;
 
   const [classId, setClassId] = useState<string | null>(null);
   const [subjectId, setSubjectId] = useState<string | null>(null);
@@ -158,12 +165,30 @@ export default function HomeworkPage() {
             <IconBook2 size={28} />
             <Title order={2}>Домашние задания</Title>
           </Group>
+          {activeChildName && !isStaff && (
+            <Badge size="lg" variant="light" color="blue">{activeChildName}</Badge>
+          )}
           {isTeacher && (
             <Button leftSection={<IconPlus size={16} />} onClick={() => setModalOpen(true)}>
               Добавить задание
             </Button>
           )}
         </Group>
+
+        {/* ── Parent child switcher ── */}
+        {isParent && me?.children && me.children.length > 1 && (
+          <Select
+            label="Ребёнок"
+            data={me.children.map((c) => ({
+              value: c.studentId,
+              label: `${c.lastName} ${c.firstName}${c.className ? ` · ${c.className}` : ''}`,
+            }))}
+            value={parentChildId ?? me.children[0]?.studentId}
+            onChange={setParentChildId}
+            allowDeselect={false}
+            w={280}
+          />
+        )}
 
         {/* ── Filters (staff only) ── */}
         {isStaff && (

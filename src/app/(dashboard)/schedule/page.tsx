@@ -168,6 +168,8 @@ function ScheduleContent() {
   const { me } = useMe();
   const canEdit = me?.role === 'super_admin' || me?.role === 'zavuch';
   const isStudentOrParent = me?.role === 'student' || me?.role === 'parent';
+  const isParent = me?.role === 'parent';
+  const [parentChildId, setParentChildId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [bells, setBells] = useState<BellSlot[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
@@ -215,7 +217,10 @@ function ScheduleContent() {
         setClasses(classesData.data);
         if (!selectedClassId && classesData.data.length > 0) {
           // Student/parent: auto-select their class
-          const myClassId = me?.student?.classId ?? me?.children?.[0]?.classId;
+          const activeChild = isParent
+            ? me?.children?.find((c) => c.studentId === parentChildId) ?? me?.children?.[0]
+            : null;
+          const myClassId = me?.student?.classId ?? activeChild?.classId;
           if (isStudentOrParent && myClassId) {
             setSelectedClassId(myClassId);
           } else {
@@ -251,6 +256,15 @@ function ScheduleContent() {
   useEffect(() => {
     if (selectedClassId) fetchEntries();
   }, [selectedClassId, fetchEntries]);
+
+  // Parent child switcher: update selectedClassId when child changes
+  useEffect(() => {
+    if (!isParent || !me?.children) return;
+    const child = me.children.find((c) => c.studentId === parentChildId) ?? me.children[0];
+    if (child?.classId && child.classId !== selectedClassId) {
+      setSelectedClassId(child.classId);
+    }
+  }, [parentChildId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filter classes by level
   const filteredClasses = classes.filter((c) => {
@@ -497,6 +511,21 @@ function ScheduleContent() {
 
   return (
     <Stack gap="md">
+      {/* Parent child switcher */}
+      {isParent && me?.children && me.children.length > 1 && (
+        <Select
+          label="Ребёнок"
+          data={me.children.map((c) => ({
+            value: c.studentId,
+            label: `${c.lastName} ${c.firstName}${c.className ? ` · ${c.className}` : ''}`,
+          }))}
+          value={parentChildId ?? me.children[0]?.studentId}
+          onChange={setParentChildId}
+          allowDeselect={false}
+          w={280}
+        />
+      )}
+
       {/* Stat cards — staff only */}
       {!isStudentOrParent && <Group gap="sm">
         <StatCard label="Нагрузка" icon={<IconUsers size={18} />} color="#228be6" href="/teachers/workload" />
