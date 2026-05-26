@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useMe } from '@/shared/hooks/useMe';
 import {
   Badge,
   Box,
@@ -164,6 +165,9 @@ function StatCard({ label, icon, color, href, onClick }: { label: string; icon: 
 
 /* ── Main Component ── */
 function ScheduleContent() {
+  const { me } = useMe();
+  const canEdit = me?.role === 'super_admin' || me?.role === 'zavuch';
+  const isStudentOrParent = me?.role === 'student' || me?.role === 'parent';
   const [loading, setLoading] = useState(true);
   const [bells, setBells] = useState<BellSlot[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
@@ -210,7 +214,13 @@ function ScheduleContent() {
       if (classesData.success) {
         setClasses(classesData.data);
         if (!selectedClassId && classesData.data.length > 0) {
-          setSelectedClassId(classesData.data[0].id);
+          // Student/parent: auto-select their class
+          const myClassId = me?.student?.classId ?? me?.children?.[0]?.classId;
+          if (isStudentOrParent && myClassId) {
+            setSelectedClassId(myClassId);
+          } else {
+            setSelectedClassId(classesData.data[0].id);
+          }
         }
       }
       if (levelsData.success) setLevels(levelsData.data);
@@ -487,8 +497,8 @@ function ScheduleContent() {
 
   return (
     <Stack gap="md">
-      {/* Stat cards */}
-      <Group gap="sm">
+      {/* Stat cards — staff only */}
+      {!isStudentOrParent && <Group gap="sm">
         <StatCard label="Нагрузка" icon={<IconUsers size={18} />} color="#228be6" href="/teachers/workload" />
         <StatCard
           label="Расписание"
@@ -514,7 +524,7 @@ function ScheduleContent() {
         >
           Автоматическое расписание
         </Button>
-      </Group>
+      </Group>}
 
       {/* Date + level filter */}
       <Group justify="space-between">
@@ -524,7 +534,7 @@ function ScheduleContent() {
             {new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
           </Text>
         </Group>
-        <SegmentedControl
+        {!isStudentOrParent && <SegmentedControl
           value={levelFilter}
           onChange={setLevelFilter}
           data={LEVEL_OPTIONS}
@@ -532,11 +542,11 @@ function ScheduleContent() {
           styles={{
             root: { background: SURFACE, border: `1px solid ${SURFACE_BORDER}` },
           }}
-        />
+        />}
       </Group>
 
-      {/* Class selector tabs */}
-      {sortedClasses.length > 0 && (
+      {/* Class selector tabs — hidden for student/parent (they see only own class) */}
+      {sortedClasses.length > 0 && !isStudentOrParent && (
         <ScrollArea type="never">
           <Group gap={4} style={{ flexWrap: 'nowrap' }}>
             {sortedClasses.map((cls) => (
@@ -710,22 +720,22 @@ function ScheduleContent() {
                         return (
                           <Table.Td
                             key={day}
-                            onClick={() => openEditModal(entry)}
+                            onClick={canEdit ? () => openEditModal(entry) : undefined}
                             style={{
                               borderBottom: cellBorder(slot.type),
                               borderRight: dayIdx < 4 ? `1px solid ${SURFACE_BORDER}` : undefined,
                               padding: '6px 10px',
                               background: cellBg(slot.type),
-                              cursor: 'pointer',
+                              cursor: canEdit ? 'pointer' : 'default',
                               verticalAlign: 'middle',
                               transition: 'background 0.15s',
                             }}
-                            onMouseEnter={(e) => {
+                            onMouseEnter={canEdit ? (e) => {
                               e.currentTarget.style.background = 'rgba(34, 139, 230, 0.15)';
-                            }}
-                            onMouseLeave={(e) => {
+                            } : undefined}
+                            onMouseLeave={canEdit ? (e) => {
                               e.currentTarget.style.background = cellBg(slot.type);
-                            }}
+                            } : undefined}
                           >
                             <Text size="xs" fw={600} c="var(--mantine-color-text)" lineClamp={1}>
                               {entry.subject.name}
@@ -741,12 +751,12 @@ function ScheduleContent() {
                       return (
                         <Table.Td
                           key={day}
-                          onClick={() => openAddModal(slot, day)}
+                          onClick={canEdit ? () => openAddModal(slot, day) : undefined}
                           style={{
                             borderBottom: `1px solid ${SURFACE_BORDER}`,
                             borderRight: dayIdx < 4 ? `1px solid ${SURFACE_BORDER}` : undefined,
                             padding: '6px 10px',
-                            cursor: 'pointer',
+                            cursor: canEdit ? 'pointer' : 'default',
                             verticalAlign: 'middle',
                             minHeight: 48,
                             transition: 'background 0.15s',
@@ -998,9 +1008,5 @@ function ScheduleContent() {
 }
 
 export default function SchedulePage() {
-  return (
-    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary', 'teacher', 'curator']}>
-      <ScheduleContent />
-    </RoleGate>
-  );
+  return <ScheduleContent />;
 }

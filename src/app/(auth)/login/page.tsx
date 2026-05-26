@@ -6,6 +6,8 @@ import { signIn, useSession } from 'next-auth/react';
 import {
   Box,
   Button,
+  Divider,
+  Group,
   PasswordInput,
   Stack,
   Text,
@@ -14,10 +16,21 @@ import {
 import { useForm } from '@mantine/form';
 import { IconLock, IconUser } from '@tabler/icons-react';
 
+/** Демо-аккаунты для быстрого входа (пароль у всех — erudit2025). */
+const DEMO_PASSWORD = 'erudit2025';
+const QUICK_ROLES: { label: string; login: string }[] = [
+  { label: 'Админ', login: 'admin' },
+  { label: 'Завуч', login: 'kozlova' },
+  { label: 'Учитель', login: 'azhibaeva' },
+  { label: 'Ученик', login: 'student1' },
+  { label: 'Родитель', login: 'parent1' },
+];
+
 export default function LoginPage() {
   const router = useRouter();
-  const { status } = useSession();
+  const { status, data: session } = useSession();
   const [loading, setLoading] = useState(false);
+  const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm({
@@ -31,34 +44,48 @@ export default function LoginPage() {
     },
   });
 
-  // If already authenticated, redirect to dashboard
+  // If already authenticated, redirect based on role
   if (status === 'authenticated') {
-    router.push('/dashboard');
+    const role = (session?.user as { role?: string })?.role;
+    router.push(role === 'student' || role === 'parent' ? '/diary' : '/dashboard');
     return null;
+  }
+
+  async function doLogin(login: string, password: string) {
+    setError(null);
+    const result = await signIn('credentials', { login, password, redirect: false });
+    if (result?.error) {
+      setError('Неверный логин или пароль');
+    } else if (result?.ok) {
+      // After login, fetch session to determine role-based redirect
+      const res = await fetch('/api/v1/me');
+      const me = await res.json().catch(() => null);
+      const role = me?.data?.role;
+      router.push(role === 'student' || role === 'parent' ? '/diary' : '/dashboard');
+    }
   }
 
   const handleSubmit = form.onSubmit(async (values) => {
     setLoading(true);
-    setError(null);
-
     try {
-      const result = await signIn('credentials', {
-        login: values.login,
-        password: values.password,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        setError('Неверный логин или пароль');
-      } else if (result?.ok) {
-        router.push('/dashboard');
-      }
+      await doLogin(values.login, values.password);
     } catch {
       setError('Произошла ошибка. Попробуйте позже.');
     } finally {
       setLoading(false);
     }
   });
+
+  async function quickLogin(login: string) {
+    setPending(login);
+    try {
+      await doLogin(login, DEMO_PASSWORD);
+    } catch {
+      setError('Произошла ошибка. Попробуйте позже.');
+    } finally {
+      setPending(null);
+    }
+  }
 
   // Show nothing while checking session
   if (status === 'loading') {
@@ -151,6 +178,29 @@ export default function LoginPage() {
             </Button>
           </Stack>
         </form>
+
+        <Divider
+          label="Быстрый вход (демо)"
+          labelPosition="center"
+          my="md"
+          styles={{ label: { color: 'var(--mantine-color-dimmed)', fontSize: 12 } }}
+        />
+        <Group gap="xs" justify="center">
+          {QUICK_ROLES.map((r) => (
+            <Button
+              key={r.login}
+              variant="light"
+              color="eruditBlue"
+              size="xs"
+              radius="sm"
+              loading={pending === r.login}
+              disabled={loading || (pending !== null && pending !== r.login)}
+              onClick={() => quickLogin(r.login)}
+            >
+              {r.label}
+            </Button>
+          ))}
+        </Group>
 
         <Text size="xs" c="dimmed" ta="center" mt={24}>
           ERUDIT ERP v0.1.0

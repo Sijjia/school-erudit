@@ -46,8 +46,8 @@ export const SIDEBAR_NAV: NavRoute[] = [
   { href: '/study-plan', label: 'Учебный план', roles: ADMIN_AND_VICE },
   {
     href: '/schedule',
-    label: 'Расписание и нагрузка',
-    roles: STAFF_AND_SECRETARY,
+    label: 'Расписание',
+    roles: ALL_AUTH,
     children: [
       { href: '/schedule/bells', label: 'Расписание звонков', roles: STAFF_AND_SECRETARY },
       { href: '/schedule/teacher', label: 'Расписание учителя', roles: STAFF_TIER },
@@ -115,7 +115,7 @@ export interface TopTab {
 }
 
 export const TOP_TABS: TopTab[] = [
-  { value: 'schedule', label: 'Текущее расписание', href: '/schedule', roles: STAFF_AND_SECRETARY },
+  { value: 'schedule', label: 'Текущее расписание', href: '/schedule', roles: ALL_AUTH },
   { value: 'classes', label: 'Классы по группам', href: '/classes', roles: STAFF_AND_SECRETARY },
   { value: 'teachers', label: 'Педагоги', href: '/teachers', roles: ['super_admin', 'analyst', 'zavuch', 'secretary'] },
   { value: 'logoped', label: 'Логопед', href: '/workspace/speech', roles: ['super_admin', 'analyst', 'zavuch', 'specialist', 'curator'] },
