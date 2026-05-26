@@ -203,7 +203,7 @@ export default function LoginPage() {
         </Group>
 
         <Text size="xs" c="dimmed" ta="center" mt={24}>
-          ERUDIT ERP v0.1.0
+          ERUDIT — Система управления школой
         </Text>
       </Box>
     </Box>

@@ -86,6 +86,10 @@ export const SIDEBAR_NAV: NavRoute[] = [
   { href: '/urgent-issues', label: 'Срочные вопросы', roles: STAFF_PLUS_SPECIALIST },
   { href: '/incidents', label: 'Происшествия', roles: STAFF_AND_SECRETARY.concat('specialist') },
   { href: '/analytics', label: 'Аналитика', roles: ADMIN_AND_VICE },
+  // Visible to admin as "in development" — shows ComingSoon stub
+  { href: '/calendar', label: 'Календарь', roles: ADMIN_AND_VICE },
+  { href: '/curriculum-plan', label: 'КТП', roles: ADMIN_AND_VICE },
+  { href: '/roles', label: 'Роли', roles: ['super_admin'] },
 ]
 
 /**
@@ -93,9 +97,6 @@ export const SIDEBAR_NAV: NavRoute[] = [
  * Uncomment and move to SIDEBAR_NAV as each feature ships.
  */
 // export const SIDEBAR_NAV_FUTURE: NavRoute[] = [
-//   { href: '/calendar', label: 'Календарь', roles: ALL_AUTH },
-//   { href: '/curriculum-plan', label: 'КТП', roles: STAFF_TIER },
-//   { href: '/roles', label: 'Роли', roles: ['super_admin'] },
 //   { href: '/achievements', label: 'Достижения', roles: ALL_AUTH },
 //   { href: '/olympiads', label: 'Олимпиады и проекты', roles: ALL_AUTH },
 //   { href: '/portfolio', label: 'Портфолио', roles: ALL_AUTH },
