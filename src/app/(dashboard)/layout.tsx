@@ -314,6 +314,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   href={item.href}
                   label={item.label}
                   leftSection={ItemIcon ? <ItemIcon size={16} stroke={1.5} /> : undefined}
+                  rightSection={item.badge ? (
+                    <Badge size="xs" variant="light" color="blue" radius="sm">{item.badge}</Badge>
+                  ) : undefined}
                   active={isActive}
                   onClick={closeMobile}
                 />

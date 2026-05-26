@@ -12,6 +12,8 @@ export interface NavRoute {
   /** Allowed roles. Empty array = visible to everyone authenticated. */
   roles: Role[]
   children?: NavRoute[]
+  /** Optional badge shown next to label (e.g. 'Скоро' for roadmap items) */
+  badge?: string
 }
 
 const ALL_AUTH: Role[] = [
@@ -86,10 +88,12 @@ export const SIDEBAR_NAV: NavRoute[] = [
   { href: '/urgent-issues', label: 'Срочные вопросы', roles: STAFF_PLUS_SPECIALIST },
   { href: '/incidents', label: 'Происшествия', roles: STAFF_AND_SECRETARY.concat('specialist') },
   { href: '/analytics', label: 'Аналитика', roles: ADMIN_AND_VICE },
-  // Visible to admin as "in development" — shows ComingSoon stub
-  { href: '/calendar', label: 'Календарь', roles: ADMIN_AND_VICE },
-  { href: '/curriculum-plan', label: 'КТП', roles: ADMIN_AND_VICE },
-  { href: '/roles', label: 'Роли', roles: ['super_admin'] },
+  // Дорожная карта — видны staff-ролям с меткой «Скоро»
+  { href: '/calendar', label: 'Календарь', roles: STAFF_TIER, badge: 'Скоро' },
+  { href: '/curriculum-plan', label: 'КТП', roles: STAFF_TIER, badge: 'Скоро' },
+  { href: '/achievements', label: 'Достижения', roles: STAFF_TIER, badge: 'Скоро' },
+  { href: '/portfolio', label: 'Портфолио', roles: STAFF_TIER, badge: 'Скоро' },
+  { href: '/library', label: 'Библиотека', roles: STAFF_TIER, badge: 'Скоро' },
 ]
 
 /**
@@ -97,15 +101,13 @@ export const SIDEBAR_NAV: NavRoute[] = [
  * Uncomment and move to SIDEBAR_NAV as each feature ships.
  */
 // export const SIDEBAR_NAV_FUTURE: NavRoute[] = [
-//   { href: '/achievements', label: 'Достижения', roles: ALL_AUTH },
+//   { href: '/roles', label: 'Роли', roles: ['super_admin'] },
 //   { href: '/olympiads', label: 'Олимпиады и проекты', roles: ALL_AUTH },
-//   { href: '/portfolio', label: 'Портфолио', roles: ALL_AUTH },
 //   { href: '/events', label: 'Мероприятия школы', roles: ALL_AUTH },
 //   { href: '/studios', label: 'Студии', roles: ALL_AUTH },
 //   { href: '/trips', label: 'Выезды', roles: ALL_AUTH },
 //   { href: '/staff', label: 'Персонал', roles: ['super_admin', 'analyst', 'zavuch', 'secretary'] },
 //   { href: '/documents', label: 'Документы', roles: ['super_admin', 'analyst', 'zavuch', 'secretary'] },
-//   { href: '/library', label: 'Библиотека', roles: ALL_AUTH },
 // ]
 
 export interface TopTab {
