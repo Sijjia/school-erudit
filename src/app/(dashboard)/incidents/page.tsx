@@ -100,7 +100,9 @@ const TYPE_OPTIONS = [
   { value: 'other', label: 'Другое' },
 ];
 
-export default function IncidentsPage() {
+import { RoleGate } from '@/shared/components/auth/RoleGate';
+
+function IncidentsContent() {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
@@ -437,5 +439,13 @@ export default function IncidentsPage() {
         </Stack>
       </Modal>
     </Stack>
+  );
+}
+
+export default function IncidentsPage() {
+  return (
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary', 'teacher', 'curator', 'specialist']}>
+      <IncidentsContent />
+    </RoleGate>
   );
 }
