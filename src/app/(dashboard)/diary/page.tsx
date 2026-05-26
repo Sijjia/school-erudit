@@ -400,33 +400,55 @@ function DiaryContent() {
             </Text>
           )}
           {!loading && scheduleByDay.length > 0 && (
-            <Stack gap="md">
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
               {scheduleByDay.map(({ day, dayName, entries }) => (
                 <Card key={day} withBorder radius="md" padding="md">
-                  <Text fw={700} mb="sm">{dayName}</Text>
-                  <Stack gap={4}>
-                    {entries.map((e) => (
-                      <Group key={e.id} gap="sm" wrap="nowrap">
+                  <Group gap="xs" mb="sm">
+                    <Badge size="lg" variant="filled" color="blue" radius="sm">
+                      {dayName}
+                    </Badge>
+                    <Text size="xs" c="dimmed">{entries.length} уроков</Text>
+                  </Group>
+                  <Stack gap={6}>
+                    {entries.map((e, idx) => (
+                      <Group
+                        key={e.id}
+                        gap="sm"
+                        wrap="nowrap"
+                        py={6}
+                        px="xs"
+                        style={{
+                          borderRadius: 8,
+                          background: idx % 2 === 0 ? 'var(--mantine-color-gray-0)' : 'transparent',
+                        }}
+                      >
                         <Badge
-                          variant="light"
+                          variant="filled"
                           color="gray"
-                          w={50}
+                          size="lg"
+                          radius="sm"
+                          w={36}
                           style={{ flexShrink: 0 }}
                         >
-                          {e.slot.startTime?.slice(0, 5)}
+                          {e.slot.slotNumber}
                         </Badge>
-                        <Text size="sm" fw={500} style={{ flexShrink: 0, minWidth: 120 }}>
-                          {e.subject.name}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          {e.teacher.lastName} {e.teacher.firstName}
+                        <Stack gap={0} style={{ flex: 1, minWidth: 0 }}>
+                          <Text size="sm" fw={600} truncate>
+                            {e.subject.name}
+                          </Text>
+                          <Text size="xs" c="dimmed" truncate>
+                            {e.teacher.lastName} {e.teacher.firstName}
+                          </Text>
+                        </Stack>
+                        <Text size="xs" c="dimmed" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
+                          {(e.slot.startTime ?? '').slice(0, 5)}–{(e.slot.endTime ?? '').slice(0, 5)}
                         </Text>
                       </Group>
                     ))}
                   </Stack>
                 </Card>
               ))}
-            </Stack>
+            </SimpleGrid>
           )}
         </Tabs.Panel>
       </Tabs>
