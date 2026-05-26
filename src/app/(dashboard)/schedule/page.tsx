@@ -29,6 +29,7 @@ import {
   IconUsers,
 } from '@tabler/icons-react';
 import Link from 'next/link';
+import { RoleGate } from '@/shared/components/auth/RoleGate';
 
 /* ── Dark theme tokens ── */
 const SURFACE = 'var(--mantine-color-default)';
@@ -162,7 +163,7 @@ function StatCard({ label, icon, color, href, onClick }: { label: string; icon: 
 }
 
 /* ── Main Component ── */
-export default function SchedulePage() {
+function ScheduleContent() {
   const [loading, setLoading] = useState(true);
   const [bells, setBells] = useState<BellSlot[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
@@ -993,5 +994,13 @@ export default function SchedulePage() {
         </Stack>
       </Modal>
     </Stack>
+  );
+}
+
+export default function SchedulePage() {
+  return (
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary', 'teacher', 'curator']}>
+      <ScheduleContent />
+    </RoleGate>
   );
 }

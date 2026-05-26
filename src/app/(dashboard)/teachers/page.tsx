@@ -42,6 +42,7 @@ import Link from 'next/link';
 import { exportToExcel } from '@/shared/lib/excel-export';
 import { ConfirmDeleteModal } from '@/shared/components/ui/ConfirmDeleteModal';
 import { notifications } from '@mantine/notifications';
+import { RoleGate } from '@/shared/components/auth/RoleGate';
 
 /* ── Name badge color palette (Mantine color names) ── */
 const NAME_COLORS = ['pink', 'orange', 'green', 'blue', 'violet', 'cyan', 'indigo', 'red'];
@@ -229,7 +230,7 @@ type LevelFilter = '' | 'primary' | 'middle' | 'senior';
 const MotionTr = motion.tr;
 
 /* ── Teachers Page ── */
-export default function TeachersPage() {
+function TeachersContent() {
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
   const [activeTab, setActiveTab] = useState<string | null>('general');
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('');
@@ -742,5 +743,13 @@ export default function TeachersPage() {
         detail="Действие нельзя отменить. Все связанные оценки/расписания останутся в БД, но без привязки."
       />
     </motion.div>
+  );
+}
+
+export default function TeachersPage() {
+  return (
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary']}>
+      <TeachersContent />
+    </RoleGate>
   );
 }

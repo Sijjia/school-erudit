@@ -115,7 +115,7 @@ export interface TopTab {
 }
 
 export const TOP_TABS: TopTab[] = [
-  { value: 'schedule', label: 'Текущее расписание', href: '/schedule', roles: ALL_AUTH },
+  { value: 'schedule', label: 'Текущее расписание', href: '/schedule', roles: STAFF_AND_SECRETARY },
   { value: 'classes', label: 'Классы по группам', href: '/classes', roles: STAFF_AND_SECRETARY },
   { value: 'teachers', label: 'Педагоги', href: '/teachers', roles: ['super_admin', 'analyst', 'zavuch', 'secretary'] },
   { value: 'logoped', label: 'Логопед', href: '/workspace/speech', roles: ['super_admin', 'analyst', 'zavuch', 'specialist', 'curator'] },

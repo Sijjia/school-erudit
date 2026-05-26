@@ -38,6 +38,7 @@ import {
 } from '@tabler/icons-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toIsoDate, formatDateLong } from '@/shared/lib/format-date';
+import { RoleGate } from '@/shared/components/auth/RoleGate';
 
 /* ── Types ── */
 interface TeacherShort {
@@ -263,7 +264,7 @@ function TeacherRow({
 }
 
 /* ── Main Page ── */
-export default function SubstitutionsPage() {
+function SubstitutionsContent() {
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [showAllDates, setShowAllDates] = useState(false);
@@ -1626,5 +1627,13 @@ export default function SubstitutionsPage() {
         </Stack>
       </Modal>
     </Stack>
+  );
+}
+
+export default function SubstitutionsPage() {
+  return (
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'teacher', 'curator']}>
+      <SubstitutionsContent />
+    </RoleGate>
   );
 }

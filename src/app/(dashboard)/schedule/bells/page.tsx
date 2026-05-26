@@ -16,6 +16,7 @@ import {
   Title,
 } from '@mantine/core';
 import { IconCheck, IconClock, IconEdit, IconX } from '@tabler/icons-react';
+import { RoleGate } from '@/shared/components/auth/RoleGate';
 
 /* ── Dark theme tokens ── */
 const SURFACE = 'var(--mantine-color-default)';
@@ -76,7 +77,7 @@ const tdStyle: React.CSSProperties = {
 };
 
 /* ── Component ── */
-export default function BellSchedulePage() {
+function BellScheduleContent() {
   const [loading, setLoading] = useState(true);
   const [bells, setBells] = useState<BellSlot[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -350,5 +351,13 @@ export default function BellSchedulePage() {
         </Group>
       </Paper>
     </Stack>
+  );
+}
+
+export default function BellSchedulePage() {
+  return (
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary', 'teacher', 'curator']}>
+      <BellScheduleContent />
+    </RoleGate>
   );
 }

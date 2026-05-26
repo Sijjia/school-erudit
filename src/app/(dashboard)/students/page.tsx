@@ -25,6 +25,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
 
 import { exportToExcel } from '@/shared/lib/excel-export';
+import { RoleGate } from '@/shared/components/auth/RoleGate';
 
 /* ── Framer Motion variants ── */
 const pageVariants = {
@@ -120,7 +121,7 @@ interface ClassSelectItem {
   label: string;
 }
 
-export default function StudentsPage() {
+function StudentsContent() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -526,5 +527,13 @@ export default function StudentsPage() {
         </Modal>
       </Stack>
     </motion.div>
+  );
+}
+
+export default function StudentsPage() {
+  return (
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary', 'teacher', 'curator', 'specialist']}>
+      <StudentsContent />
+    </RoleGate>
   );
 }

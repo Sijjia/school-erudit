@@ -20,6 +20,7 @@ import {
 } from '@mantine/core';
 import { IconPencil, IconPlus, IconSchool, IconTrash } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
+import { RoleGate } from '@/shared/components/auth/RoleGate';
 
 /* ── Dark theme tokens ── */
 const SURFACE = 'var(--mantine-color-default)';
@@ -77,7 +78,7 @@ function curatorName(curator: Teacher | null): string {
 }
 
 /* ── Component ── */
-export default function ClassesPage() {
+function ClassesContent() {
   const [levels, setLevels] = useState<SchoolLevel[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -398,5 +399,13 @@ export default function ClassesPage() {
         </Stack>
       </Modal>
     </Stack>
+  );
+}
+
+export default function ClassesPage() {
+  return (
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary', 'teacher', 'curator']}>
+      <ClassesContent />
+    </RoleGate>
   );
 }

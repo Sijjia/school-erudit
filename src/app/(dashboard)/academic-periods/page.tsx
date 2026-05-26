@@ -17,6 +17,7 @@ import {
   Title,
 } from '@mantine/core';
 import { IconCalendarEvent, IconPlus } from '@tabler/icons-react';
+import { RoleGate } from '@/shared/components/auth/RoleGate';
 
 /* ── Dark theme tokens ── */
 const SURFACE = 'var(--mantine-color-default)';
@@ -74,7 +75,7 @@ function formatDate(dateStr: string): string {
 }
 
 /* ── Component ── */
-export default function AcademicPeriodsPage() {
+function AcademicPeriodsContent() {
   const [periods, setPeriods] = useState<AcademicPeriod[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -459,5 +460,13 @@ export default function AcademicPeriodsPage() {
         </Stack>
       </Modal>
     </Stack>
+  );
+}
+
+export default function AcademicPeriodsPage() {
+  return (
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch']}>
+      <AcademicPeriodsContent />
+    </RoleGate>
   );
 }

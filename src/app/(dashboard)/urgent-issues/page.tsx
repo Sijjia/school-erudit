@@ -32,6 +32,7 @@ import {
   IconX,
 } from '@tabler/icons-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { RoleGate } from '@/shared/components/auth/RoleGate';
 
 /* ── Types ── */
 interface UrgentIssue {
@@ -97,7 +98,7 @@ const ROLE_LABELS: Record<string, string> = {
   specialist: 'Специалист',
 };
 
-export default function UrgentIssuesPage() {
+function UrgentIssuesContent() {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
@@ -442,5 +443,13 @@ export default function UrgentIssuesPage() {
         </Stack>
       </Modal>
     </Stack>
+  );
+}
+
+export default function UrgentIssuesPage() {
+  return (
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'teacher', 'curator', 'specialist']}>
+      <UrgentIssuesContent />
+    </RoleGate>
   );
 }

@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import { AuthGuard } from '@/shared/components/auth/AuthGuard';
 import {
   ActionIcon,
@@ -11,6 +12,7 @@ import {
   Badge,
   Box,
   Group,
+  Menu,
   NavLink,
   ScrollArea,
   Tabs,
@@ -34,6 +36,8 @@ import {
   IconCalendar,
   IconCalendarEvent,
   IconChalkboard,
+  IconChevronDown,
+  IconLogout,
   IconChartBar,
   IconChartDots,
   IconClipboardList,
@@ -68,6 +72,7 @@ import {
 } from '@tabler/icons-react';
 
 const SIDEBAR_ICONS: Record<string, React.ComponentType<{ size?: number; stroke?: number }>> = {
+  '/diary': IconNotebook,
   '/dashboard': IconHome,
   '/calendar': IconCalendar,
   '/classes': IconSchool,
@@ -149,6 +154,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { role, login } = useRole();
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
 
+  // Student/parent → redirect to diary instead of dashboard
+  useEffect(() => {
+    if ((role === 'student' || role === 'parent') && pathname === '/dashboard') {
+      router.replace('/diary');
+    }
+  }, [role, pathname, router]);
+
   const visibleSidebar = useMemo(() => filterNavByRole(SIDEBAR_NAV, role), [role]);
   const visibleTabs = useMemo(() => filterNavByRole(TOP_TABS, role), [role]);
 
@@ -197,15 +209,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <ActionIcon variant="subtle" color="gray" size="lg">
                 <IconBell size={20} stroke={1.5} />
               </ActionIcon>
-              <Group gap={8}>
-                <Avatar size={32} radius="xl" color="eruditBlue" variant="filled">
-                  {getInitials(login)}
-                </Avatar>
-                <Box>
-                  <Text size="xs" fw={500} lh={1.2}>{login ?? '—'}</Text>
-                  <Text size="xs" c="dimmed" lh={1.2}>{role ? ROLE_LABEL[role] ?? role : '—'}</Text>
-                </Box>
-              </Group>
+              <Menu shadow="md" width={220} position="bottom-end" withArrow>
+                <Menu.Target>
+                  <Group gap={8} style={{ cursor: 'pointer' }}>
+                    <Avatar size={32} radius="xl" color="eruditBlue" variant="filled">
+                      {getInitials(login)}
+                    </Avatar>
+                    <Box>
+                      <Text size="xs" fw={500} lh={1.2}>{login ?? '—'}</Text>
+                      <Text size="xs" c="dimmed" lh={1.2}>{role ? ROLE_LABEL[role] ?? role : '—'}</Text>
+                    </Box>
+                    <IconChevronDown size={14} stroke={1.5} style={{ color: 'var(--mantine-color-dimmed)' }} />
+                  </Group>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Label>{login ?? '—'} · {role ? ROLE_LABEL[role] ?? role : '—'}</Menu.Label>
+                  <Menu.Item
+                    color="red"
+                    leftSection={<IconLogout size={16} stroke={1.5} />}
+                    onClick={() => signOut({ callbackUrl: '/login' })}
+                  >
+                    Выйти
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
             </Group>
           </Group>
 
