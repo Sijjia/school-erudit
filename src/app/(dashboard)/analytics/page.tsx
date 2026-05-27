@@ -354,7 +354,6 @@ export default function AnalyticsPage() {
             </>
           )}
         </Stack>
-      </Stack>
     </RoleGate>
   );
 }
