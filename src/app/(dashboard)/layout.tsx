@@ -211,7 +211,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       <Text size="xs" fw={500} lh={1.2}>{login ?? '—'}</Text>
                       <Text size="xs" c="dimmed" lh={1.2}>{role ? ROLE_LABEL[role] ?? role : '—'}</Text>
                     </Box>
-                    <IconChevronDown size={14} stroke={1.5} style={{ color: 'var(--mantine-color-dimmed)' }} visibleFrom="sm" />
+                    <Box visibleFrom="sm" component="span"><IconChevronDown size={14} stroke={1.5} style={{ color: 'var(--mantine-color-dimmed)' }} /></Box>
                   </Group>
                 </Menu.Target>
                 <Menu.Dropdown>
