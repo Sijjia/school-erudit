@@ -16,7 +16,6 @@ import {
 import { useForm } from '@mantine/form';
 import {
   IconArrowRight,
-  IconGlobe,
   IconLock,
   IconMessageCircle,
   IconSchool,
@@ -186,22 +185,13 @@ export default function LoginPage() {
                 Войти в кабинет
               </Button>
 
-              <Group gap={12} my={10} style={{ color: '#9ba2ad', fontSize: 12 }}>
-                <Box style={{ flex: 1, height: 1, background: '#e6e9ee' }} />
-                или
-                <Box style={{ flex: 1, height: 1, background: '#e6e9ee' }} />
-              </Group>
-
-              <Button variant="default" fullWidth size="lg" leftSection={<IconGlobe size={17} />} style={{ fontWeight: 600 }}>
-                Войти через ЕГСУ
-              </Button>
             </Stack>
           </form>
         </Box>
 
         {/* Footer */}
         <Group justify="space-between" style={{ fontSize: 12, color: '#9ba2ad' }}>
-          <span>© 2026 ERUDIT — Система управления школой</span>
+          <span>© 2026 ERUDIT · Разработано Asystem</span>
         </Group>
       </Box>
 
