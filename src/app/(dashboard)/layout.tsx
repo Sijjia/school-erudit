@@ -182,21 +182,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <AuthGuard>
       <AppShell
-        header={{ height: { base: 50, sm: 90 } }}
-        navbar={{ width: 220, breakpoint: 'sm', collapsed: { mobile: !mobileOpened } }}
+        header={{ height: { base: 50, sm: 64 } }}
+        navbar={{ width: 256, breakpoint: 'sm', collapsed: { mobile: !mobileOpened } }}
         padding="md"
+        styles={{
+          navbar: {
+            borderRight: '1px solid #e6e9ee',
+            backgroundColor: '#ffffff',
+          },
+          header: {
+            borderBottom: '1px solid #e6e9ee',
+            backgroundColor: '#ffffff',
+          },
+          main: {
+            backgroundColor: '#f8f9fb',
+          },
+        }}
       >
         <AppShell.Header>
-          <Group h={50} px="md" justify="space-between">
+          <Group h="100%" px="md" justify="space-between">
             <Group gap="md">
               <Burger opened={mobileOpened} onClick={toggleMobile} hiddenFrom="sm" size="sm" />
-              <Box w={180} visibleFrom="sm">
-                <EruditeLogo size="md" />
-              </Box>
-              <Group gap={8}>
-                <Text size="sm" c="dimmed">{today.label}</Text>
-                <Badge variant="light" color="gray" size="sm" radius="sm">{today.weekday}</Badge>
-              </Group>
+              <Text size="lg" fw={600} c="var(--mantine-color-gray-9)" style={{ letterSpacing: '-0.01em' }}>
+                {visibleSidebar.find((s) => pathname === s.href || pathname.startsWith(s.href + '/'))?.label ?? 'ERUDIT'}
+              </Text>
             </Group>
 
             <Group gap="md">
@@ -240,35 +249,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Group>
           </Group>
 
-          <Group h={40} px="md" gap="md" visibleFrom="sm">
-            <Box w={180}>
-              <ActionIcon variant="filled" color="blue" size="sm">
-                <IconGridDots size={14} />
-              </ActionIcon>
-            </Box>
-            <ScrollArea type="never" style={{ flex: 1 }}>
-              <Tabs value={activeTab} onChange={handleTabChange} variant="default">
-                <Tabs.List style={{ flexWrap: 'nowrap', borderBottom: 'none' }}>
-                  {visibleTabs.map((tab) => {
-                    const TabIcon = TOP_TAB_ICONS[tab.value];
-                    return (
-                      <Tabs.Tab
-                        key={tab.value}
-                        value={tab.value}
-                        leftSection={TabIcon ? <TabIcon size={14} stroke={1.5} /> : undefined}
-                        fz={12}
-                      >
-                        {tab.label}
-                      </Tabs.Tab>
-                    );
-                  })}
-                </Tabs.List>
-              </Tabs>
-            </ScrollArea>
-          </Group>
+          {/* Top tabs removed — navigation via sidebar */}
         </AppShell.Header>
 
         <AppShell.Navbar p="xs">
+          {/* Brand */}
+          <Box px="sm" py="md" mb="xs" style={{ borderBottom: '1px solid #eef0f4' }}>
+            <Group gap={10}>
+              <div className="brand-mark">E</div>
+              <div>
+                <Text fw={700} size="sm" lh={1.2} style={{ letterSpacing: '-0.02em' }}>ERUDIT</Text>
+                <Text size="xs" c="dimmed" lh={1.2} fw={500}>Система управления школой</Text>
+              </div>
+            </Group>
+          </Box>
+
+          <Text size="xs" fw={600} c="dimmed" px="sm" mb={4} style={{ textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: 11 }}>
+            Меню
+          </Text>
+
           <AppShell.Section grow component={ScrollArea}>
             {visibleSidebar.map((item: NavRoute) => {
               const hasChildren = item.children && item.children.length > 0;

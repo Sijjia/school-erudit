@@ -1,8 +1,12 @@
+/* ERUDIT — global styles & design tokens */
+
 html,
 body {
   height: 100%;
   margin: 0;
   padding: 0;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 * {
@@ -14,7 +18,56 @@ a {
   text-decoration: none;
 }
 
+/* Subtle scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #dde1e8; border-radius: 8px; border: 2px solid #f8f9fb; }
+::-webkit-scrollbar-thumb:hover { background: #c5cad3; }
+
+/* Grade chip animations */
 @keyframes antidvoika-pulse {
   0%, 100% { box-shadow: 0 0 4px rgba(250, 82, 82, 0.4); }
   50% { box-shadow: 0 0 12px rgba(250, 82, 82, 0.8); }
 }
+
+/* Brand mark gradient (sidebar logo) */
+.brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #228be6 0%, #1864ab 100%);
+  display: grid;
+  place-items: center;
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px -2px rgba(34, 139, 230, 0.35);
+}
+
+/* KPI/Stat value */
+.kpi-value {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+/* Grade chips */
+.grade-chip {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 600;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.grade-chip.g5 { background: #d3f9d8; color: #2f9e44; }
+.grade-chip.g4 { background: #dbeafe; color: #1864ab; }
+.grade-chip.g3 { background: #fff3bf; color: #f08c00; }
+.grade-chip.g2 { background: #ffe3e3; color: #e03131; }
