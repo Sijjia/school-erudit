@@ -17,6 +17,17 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return {
+      // Serve the static marketing landing at "/" (before app routes).
+      // App routes like /login, /dashboard are untouched.
+      beforeFiles: [
+        { source: '/', destination: '/landing.html' },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
 };
 
 export default nextConfig;
