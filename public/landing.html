@@ -180,21 +180,8 @@
             }
         }
 
-        /* Initial state for reveal animations — gated by .js-reveal so content is never blank if scripts fail */
-        .js-reveal .reveal-up { opacity: 0; visibility: hidden; }
+        /* reveal-up blocks are VISIBLE by default; GSAP animates them in via gsap.from(), so content is never blank even if scripts/CDN fail */
     </style>
-    <script>
-      // Hide reveal blocks only if JS runs; failsafe un-hides if GSAP never loads (CDN blocked).
-      document.documentElement.classList.add('js-reveal');
-      window.addEventListener('load', function () {
-        setTimeout(function () {
-          if (typeof window.gsap === 'undefined' || typeof window.ScrollTrigger === 'undefined') {
-            document.documentElement.classList.remove('js-reveal');
-            document.querySelectorAll('.counter').forEach(function (c) { c.innerHTML = c.getAttribute('data-target'); });
-          }
-        }, 1200);
-      });
-    </script>
 </head>
 <body class="antialiased selection:bg-primary-light selection:text-white">
 
@@ -657,12 +644,10 @@
             
             if (!prefersReducedMotion) {
                 // Initial setup for reveal elements
-                gsap.set('.reveal-up', { y: 40, opacity: 0 });
-
                 ScrollTrigger.batch('.reveal-up', {
-                    onEnter: batch => gsap.to(batch, {
-                        y: 0,
-                        opacity: 1,
+                    onEnter: batch => gsap.from(batch, {
+                        y: 40,
+                        opacity: 0,
                         duration: 0.8,
                         stagger: 0.15,
                         ease: 'power3.out'
