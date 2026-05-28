@@ -644,16 +644,8 @@
             
             if (!prefersReducedMotion) {
                 // Initial setup for reveal elements
-                ScrollTrigger.batch('.reveal-up', {
-                    onEnter: batch => gsap.from(batch, {
-                        y: 40,
-                        opacity: 0,
-                        duration: 0.8,
-                        stagger: 0.15,
-                        ease: 'power3.out'
-                    }),
-                    once: true
-                });
+                // Reveal-fade removed: content is always fully visible (no opacity tricks).
+                // Motion still comes from aurora background, animated counters, hero parallax, hovers.
 
                 // Hero Parallax effect
                 gsap.to('#hero-content', {
