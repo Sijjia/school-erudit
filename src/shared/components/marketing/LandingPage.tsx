@@ -3,65 +3,73 @@
 import Link from 'next/link';
 import {
   Anchor,
-  Badge,
   Box,
   Button,
   Card,
   Container,
-  Divider,
   Group,
   SimpleGrid,
   Stack,
   Text,
   ThemeIcon,
-  Title,
 } from '@mantine/core';
 import {
   IconArrowRight,
   IconArrowsExchange,
-  IconChartBar,
   IconCheck,
   IconLock,
-  IconNotebook,
-  IconShieldCheck,
-  IconStar,
+  IconStethoscope,
   IconTable,
 } from '@tabler/icons-react';
 
-const BLUE = '#228be6';
-const DARK = '#0f172a';
+const INK = '#211c17';
+const PAPER = '#faf6f0';
+const MUTED = '#7a7068';
+const LINE = '#ece3d6';
+const ACCENT = '#1864ab';
+const SERIF = "var(--font-playfair), Georgia, 'Times New Roman', serif";
+
+const STATS: Array<[string, string]> = [
+  ['9', 'ролей с разграничением'],
+  ['20+', 'рабочих модулей'],
+  ['2 уровня', 'модерации оценок'],
+  ['100%', 'доступ проверен тестами'],
+];
 
 const FEATURES = [
   {
-    icon: IconStar,
-    title: 'Журнал и оценивание',
-    text: 'Категории оценок, комментарии, средневзвешенный балл. Всё, что школа использует каждый день.',
+    img: '/landing/classroom.jpg',
+    eyebrow: 'Контроль качества',
+    title: 'Двухуровневая модерация оценок',
+    text: 'Важные оценки попадают в дневник только после проверки: учитель выставляет — завуч утверждает — аналитик публикует. Каждое изменение фиксируется в журнале аудита: кто, когда и что изменил.',
   },
   {
-    icon: IconShieldCheck,
-    title: 'Модерация оценок + аудит',
-    text: 'Важные оценки видны семье только после проверки: учитель → завуч → публикация. Каждое изменение зафиксировано.',
+    img: '/landing/teacher.jpg',
+    eyebrow: 'Связь с семьёй',
+    title: 'Дневник для учеников и родителей',
+    text: 'Мобильный дневник с переключателем детей. Родитель видит только своего ребёнка и только опубликованные оценки, посещаемость и домашние задания — меньше звонков в школу.',
   },
   {
-    icon: IconTable,
-    title: 'Расписание и замены',
-    text: 'Сетка уроков, звонки, замены. Понятно учителям, ученикам и родителям.',
+    img: '/landing/students.jpg',
+    eyebrow: 'Для руководства',
+    title: 'Аналитика по школе в реальном времени',
+    text: 'Дашборд и отчёты по успеваемости и посещаемости с экспортом в Excel. У директора всегда есть общая картина — без сбора данных вручную по таблицам.',
   },
-  {
-    icon: IconArrowsExchange,
-    title: 'Нагрузка и передача',
-    text: 'Декрет, болезнь, увольнение — нагрузка переходит одной операцией. История сохраняется.',
-  },
-  {
-    icon: IconNotebook,
-    title: 'Дневник ученика и родителя',
-    text: 'Родитель видит только своего ребёнка и только опубликованные оценки. Честно и понятно.',
-  },
-  {
-    icon: IconChartBar,
-    title: 'Аналитика для руководства',
-    text: 'Картина по школе в реальном времени — успеваемость, посещаемость, нагрузка.',
-  },
+];
+
+const MORE = [
+  { icon: IconTable, title: 'Расписание и замены', text: 'Сетка, звонки, авто-генерация и проверка конфликтов.' },
+  { icon: IconArrowsExchange, title: 'Нагрузка и передача', text: 'Декрет, болезнь, увольнение — нагрузка переходит одной операцией.' },
+  { icon: IconStethoscope, title: 'Кабинеты специалистов', text: 'Логопед, психолог, медкабинет — профильные записи.' },
+];
+
+const MODULES: Array<{ group: string; items: string[] }> = [
+  { group: 'Учебный процесс', items: ['Электронный журнал', 'Оценивание (4 шкалы)', 'Модерация оценок', 'Периоды и категории', 'Домашние задания', 'Посещаемость'] },
+  { group: 'Расписание и нагрузка', items: ['Расписание и звонки', 'Авто-генерация + конфликты', 'Замены уроков', 'Нагрузка педагогов', 'Передача нагрузки'] },
+  { group: 'Люди и доступ', items: ['Классы, группы, переводы', 'Карточки учеников', 'Дескрипторы педагогов', '9 ролей + изоляция данных'] },
+  { group: 'Дневник и общение', items: ['Дневник ученика и родителя', 'Происшествия', 'Срочные вопросы', 'Новости', 'Чаты'] },
+  { group: 'Специалисты', items: ['Психолог', 'Логопед', 'Медкабинет', 'Кабинет родителей'] },
+  { group: 'Аналитика и отчёты', items: ['Дашборд', 'Отчёты + экспорт в Excel', 'Аналитика с графиками', 'Поиск'] },
 ];
 
 const STEPS = [
@@ -78,266 +86,263 @@ const SECURITY = [
   'Хостинг Vercel · база Neon Postgres',
 ];
 
-const MODULES: Array<{ group: string; items: string[] }> = [
-  { group: 'Учебный процесс', items: ['Электронный журнал', 'Оценивание (4 шкалы)', 'Модерация оценок', 'Периоды и категории', 'Домашние задания', 'Посещаемость'] },
-  { group: 'Расписание и нагрузка', items: ['Расписание и звонки', 'Авто-генерация + конфликты', 'Замены уроков', 'Нагрузка педагогов', 'Передача нагрузки'] },
-  { group: 'Люди и доступ', items: ['Классы, группы, переводы', 'Карточки учеников', 'Дескрипторы педагогов', '9 ролей + изоляция данных'] },
-  { group: 'Дневник и общение', items: ['Дневник ученика и родителя', 'Происшествия', 'Срочные вопросы', 'Новости', 'Чаты'] },
-  { group: 'Специалисты', items: ['Психолог', 'Логопед', 'Медкабинет', 'Кабинет родителей'] },
-  { group: 'Аналитика и отчёты', items: ['Дашборд', 'Отчёты + экспорт в Excel', 'Аналитика с графиками', 'Поиск'] },
-];
-
-function NavLinkA({ href, children }: { href: string; children: React.ReactNode }) {
+function Eyebrow({ children, light = false }: { children: React.ReactNode; light?: boolean }) {
   return (
-    <Anchor href={href} c="dimmed" fw={500} size="sm" underline="never" style={{ letterSpacing: '-0.01em' }}>
+    <Text className="landing-eyebrow" style={{ color: light ? 'rgba(255,255,255,0.75)' : ACCENT }}>
       {children}
-    </Anchor>
+    </Text>
   );
+}
+
+function Serif({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return <Box className="landing-serif" component="h2" style={{ margin: 0, fontWeight: 600, color: INK, letterSpacing: '-0.01em', ...style }}>{children}</Box>;
 }
 
 export default function LandingPage() {
   return (
-    <Box bg="white">
+    <Box style={{ background: PAPER, color: INK }}>
       {/* ===== NAV ===== */}
       <Box className="landing-nav">
         <Container size="lg" py={14}>
           <Group justify="space-between">
             <Group gap={10}>
               <div className="brand-mark" style={{ width: 34, height: 34, fontSize: 15, borderRadius: 9 }}>B</div>
-              <Text fw={700} size="lg" style={{ letterSpacing: '-0.02em' }}>Bilim OS</Text>
+              <Text fw={700} size="lg" style={{ letterSpacing: '-0.02em', color: INK }}>Bilim OS</Text>
             </Group>
             <Group gap={28} visibleFrom="sm">
-              <NavLinkA href="#features">Возможности</NavLinkA>
-              <NavLinkA href="#modules">Модули</NavLinkA>
-              <NavLinkA href="#how">Как это работает</NavLinkA>
-              <NavLinkA href="#security">Безопасность</NavLinkA>
-              <NavLinkA href="#pricing">Цена</NavLinkA>
+              <Anchor href="#features" c={MUTED} fw={500} size="sm" underline="never">Возможности</Anchor>
+              <Anchor href="#modules" c={MUTED} fw={500} size="sm" underline="never">Модули</Anchor>
+              <Anchor href="#how" c={MUTED} fw={500} size="sm" underline="never">Как это работает</Anchor>
+              <Anchor href="#pricing" c={MUTED} fw={500} size="sm" underline="never">Цена</Anchor>
             </Group>
             <Group gap={8}>
-              <Button component={Link} href="/login" variant="subtle" color="gray" size="sm" visibleFrom="xs">
-                Войти
-              </Button>
-              <Button component={Link} href="/login" size="sm" rightSection={<IconArrowRight size={16} />}>
-                Смотреть демо
-              </Button>
+              <Button component={Link} href="/login" variant="subtle" color="gray" size="sm" visibleFrom="xs">Войти</Button>
+              <Button component={Link} href="/login" size="sm" color="eruditBlue" rightSection={<IconArrowRight size={16} />}>Смотреть демо</Button>
             </Group>
           </Group>
         </Container>
       </Box>
 
       {/* ===== HERO ===== */}
-      <Box className="landing-hero">
-        <Container size="lg" pt={{ base: 56, md: 90 }} pb={{ base: 48, md: 80 }}>
-          <SimpleGrid cols={{ base: 1, md: 2 }} spacing={{ base: 40, md: 56 }} verticalSpacing={40} style={{ alignItems: 'center' }}>
-            <Stack gap="lg">
-              <Badge size="lg" radius="sm" variant="light" color="eruditBlue" style={{ alignSelf: 'flex-start' }}>
-                Школьная ERP · Бишкек
-              </Badge>
-              <Title order={1} style={{ fontSize: 'clamp(34px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.03em', fontWeight: 800 }}>
-                Вся школа —{' '}
-                <span className="landing-gradient-text">в одной системе</span>
-              </Title>
-              <Text size="xl" c="dimmed" style={{ maxWidth: 520, lineHeight: 1.5 }}>
-                Журнал, оценки, расписание, аналитика и общение — в одном месте,
-                с доступом строго по ролям. Рабочее ядро работает уже сегодня.
-              </Text>
-              <Group gap="sm" mt="xs">
-                <Button component={Link} href="/login" size="md" rightSection={<IconArrowRight size={18} />}>
-                  Смотреть демо
-                </Button>
-                <Button component="a" href="#pricing" size="md" variant="default">
-                  Цена и условия
-                </Button>
-              </Group>
-              <Group gap={18} mt="xs" c="dimmed">
-                <Group gap={6}><IconCheck size={16} color={BLUE} /><Text size="sm">Без установки</Text></Group>
-                <Group gap={6}><IconCheck size={16} color={BLUE} /><Text size="sm">Работает в браузере</Text></Group>
-                <Group gap={6}><IconCheck size={16} color={BLUE} /><Text size="sm">Живое демо</Text></Group>
-              </Group>
-            </Stack>
-
-            {/* product mock */}
-            <HeroMock />
-          </SimpleGrid>
+      <Box
+        className="landing-photoband"
+        style={{ backgroundImage: 'url(/landing/hero.jpg)', minHeight: 'clamp(540px, 82vh, 780px)', display: 'flex', alignItems: 'center' }}
+      >
+        <div className="landing-scrim" />
+        <Container size="lg" style={{ position: 'relative', width: '100%' }} py={64}>
+          <Stack gap="lg" maw={720}>
+            <Eyebrow light>Школьная ERP · Бишкек</Eyebrow>
+            <Box className="landing-serif" component="h1" style={{ margin: 0, color: '#fff', fontWeight: 700, fontSize: 'clamp(40px, 6.4vw, 76px)', lineHeight: 1.04, letterSpacing: '-0.02em' }}>
+              Вся школа — в одной системе
+            </Box>
+            <Text style={{ color: 'rgba(255,255,255,0.88)', fontSize: 'clamp(17px, 2vw, 21px)', lineHeight: 1.55, maxWidth: 560 }}>
+              Журнал, оценки, расписание, аналитика и общение — в одном месте,
+              с доступом строго по ролям. Рабочее ядро работает уже сегодня.
+            </Text>
+            <Group gap="sm" mt="xs">
+              <Button component={Link} href="/login" size="md" color="eruditBlue" rightSection={<IconArrowRight size={18} />}>
+                Смотреть демо
+              </Button>
+              <Button component="a" href="#pricing" size="md" variant="white" color="dark">
+                Цена и условия
+              </Button>
+            </Group>
+          </Stack>
         </Container>
       </Box>
 
       {/* ===== STATS ===== */}
-      <Box style={{ borderTop: '1px solid #eef0f4', borderBottom: '1px solid #eef0f4', background: '#fbfcfe' }}>
-        <Container size="lg" py={26}>
-          <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="lg">
-            {[
-              ['9', 'ролей с разграничением'],
-              ['20+', 'рабочих разделов'],
-              ['2 уровня', 'модерации оценок'],
-              ['100%', 'доступ проверен тестами'],
-            ].map(([v, l]) => (
-              <Stack key={l} gap={2} align="center">
-                <Text fw={800} style={{ fontSize: 28, letterSpacing: '-0.03em' }} className="landing-gradient-text">{v}</Text>
-                <Text size="sm" c="dimmed" ta="center">{l}</Text>
+      <Box style={{ borderBottom: `1px solid ${LINE}` }}>
+        <Container size="lg" py={40}>
+          <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xl">
+            {STATS.map(([v, l]) => (
+              <Stack key={l} gap={4} align="center">
+                <Box className="landing-serif" style={{ fontSize: 'clamp(34px, 4vw, 46px)', fontWeight: 700, color: INK, lineHeight: 1 }}>{v}</Box>
+                <Text size="sm" c={MUTED} ta="center">{l}</Text>
               </Stack>
             ))}
           </SimpleGrid>
         </Container>
       </Box>
 
-      {/* ===== FEATURES ===== */}
-      <Container size="lg" py={{ base: 56, md: 84 }} id="features">
-        <Stack gap={8} align="center" mb={44}>
-          <Badge variant="light" color="eruditBlue" radius="sm">Возможности</Badge>
-          <Title order={2} ta="center" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', letterSpacing: '-0.025em' }}>
-            Рабочее ядро — с первого дня
-          </Title>
-          <Text c="dimmed" ta="center" style={{ maxWidth: 580 }}>
-            Не обещание будущего, а инструмент, которым школа пользуется каждый день.
-          </Text>
+      {/* ===== POSITIONING ===== */}
+      <Box style={{ background: '#fff', borderBottom: `1px solid ${LINE}` }}>
+        <Container size="lg" py={{ base: 56, md: 96 }}>
+          <Stack gap="lg" maw={820} mx="auto" align="center">
+            <Eyebrow>Зачем это школе</Eyebrow>
+            <Serif style={{ fontSize: 'clamp(26px, 3.6vw, 40px)', lineHeight: 1.22, textAlign: 'center', fontWeight: 500 }}>
+              Вместо бумаги, Excel и разрозненных таблиц — одна система, где каждый
+              видит ровно то, что нужно для его работы.
+            </Serif>
+            <Text c={MUTED} ta="center" style={{ maxWidth: 620, fontSize: 17, lineHeight: 1.6 }}>
+              Директор получает общую картину, учитель экономит время, завуч контролирует
+              качество оценок, а родитель видит честную успеваемость ребёнка.
+            </Text>
+          </Stack>
+        </Container>
+      </Box>
+
+      {/* ===== FEATURE ROWS ===== */}
+      <Container size="lg" py={{ base: 24, md: 40 }} id="features">
+        <Stack gap={{ base: 56, md: 100 }} py={{ base: 32, md: 48 }}>
+          {FEATURES.map((f, i) => {
+            const imageFirst = i % 2 === 0;
+            const photo = (
+              <Box className="landing-frame" style={{ aspectRatio: '4 / 3' }}>
+                <img src={f.img} alt={f.title} className="landing-photo" loading="lazy" />
+              </Box>
+            );
+            const copy = (
+              <Stack gap="md" justify="center">
+                <Eyebrow>{f.eyebrow}</Eyebrow>
+                <Serif style={{ fontSize: 'clamp(24px, 3vw, 34px)', lineHeight: 1.18 }}>{f.title}</Serif>
+                <Text c={MUTED} style={{ fontSize: 17, lineHeight: 1.65 }}>{f.text}</Text>
+              </Stack>
+            );
+            return (
+              <SimpleGrid key={f.title} cols={{ base: 1, md: 2 }} spacing={{ base: 28, md: 64 }} style={{ alignItems: 'center' }}>
+                {imageFirst ? <>{photo}{copy}</> : <><Box hiddenFrom="md">{photo}</Box>{copy}<Box visibleFrom="md">{photo}</Box></>}
+              </SimpleGrid>
+            );
+          })}
         </Stack>
-        <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
-          {FEATURES.map((f) => (
-            <Card key={f.title} className="landing-card" padding="lg" radius="lg" withBorder style={{ borderColor: '#e6e9ee' }}>
-              <ThemeIcon size={44} radius="md" variant="light" color="eruditBlue" mb="md">
-                <f.icon size={24} stroke={1.7} />
+
+        {/* compact trio */}
+        <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="lg" pb={{ base: 40, md: 64 }}>
+          {MORE.map((m) => (
+            <Card key={m.title} className="landing-card" padding="lg" radius="md" withBorder style={{ borderColor: LINE, background: '#fff' }}>
+              <ThemeIcon size={42} radius="md" variant="light" color="eruditBlue" mb="sm">
+                <m.icon size={22} stroke={1.7} />
               </ThemeIcon>
-              <Text fw={700} size="lg" mb={6} style={{ letterSpacing: '-0.01em' }}>{f.title}</Text>
-              <Text c="dimmed" size="sm" style={{ lineHeight: 1.55 }}>{f.text}</Text>
+              <Text fw={700} mb={4} style={{ color: INK }}>{m.title}</Text>
+              <Text size="sm" c={MUTED} style={{ lineHeight: 1.55 }}>{m.text}</Text>
             </Card>
           ))}
         </SimpleGrid>
       </Container>
 
       {/* ===== MODULES ===== */}
-      <Container size="lg" py={{ base: 56, md: 84 }} id="modules">
-        <Stack gap={8} align="center" mb={44}>
-          <Badge variant="light" color="eruditBlue" radius="sm">Модули</Badge>
-          <Title order={2} ta="center" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', letterSpacing: '-0.025em' }}>
-            Более 20 рабочих модулей
-          </Title>
-          <Text c="dimmed" ta="center" style={{ maxWidth: 580 }}>
-            Всё перечисленное работает уже сегодня — это не дорожная карта.
-          </Text>
-        </Stack>
-        <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
-          {MODULES.map((m) => (
-            <Card key={m.group} className="landing-card" padding="lg" radius="lg" withBorder style={{ borderColor: '#e6e9ee' }}>
-              <Text fw={700} mb="sm" style={{ letterSpacing: '-0.01em' }}>{m.group}</Text>
-              <Stack gap={8}>
-                {m.items.map((it) => (
-                  <Group key={it} gap={8} wrap="nowrap" align="center">
-                    <IconCheck size={15} color={BLUE} style={{ flexShrink: 0 }} />
-                    <Text size="sm" c="dimmed">{it}</Text>
-                  </Group>
-                ))}
-              </Stack>
-            </Card>
-          ))}
-        </SimpleGrid>
-      </Container>
-
-      {/* ===== HOW IT WORKS ===== */}
-      <Box style={{ background: '#fbfcfe', borderTop: '1px solid #eef0f4', borderBottom: '1px solid #eef0f4' }}>
-        <Container size="lg" py={{ base: 56, md: 84 }} id="how">
+      <Box style={{ background: '#fff', borderTop: `1px solid ${LINE}`, borderBottom: `1px solid ${LINE}` }}>
+        <Container size="lg" py={{ base: 56, md: 88 }} id="modules">
           <Stack gap={8} align="center" mb={44}>
-            <Badge variant="light" color="eruditBlue" radius="sm">Как это работает</Badge>
-            <Title order={2} ta="center" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', letterSpacing: '-0.025em' }}>
-              От демо до запуска
-            </Title>
+            <Eyebrow>Модули</Eyebrow>
+            <Serif style={{ fontSize: 'clamp(26px, 3.5vw, 40px)', textAlign: 'center' }}>Более 20 рабочих модулей</Serif>
+            <Text c={MUTED} ta="center" style={{ maxWidth: 560 }}>Всё перечисленное работает уже сегодня — это не дорожная карта.</Text>
           </Stack>
-          <SimpleGrid cols={{ base: 1, md: 3 }} spacing="lg">
-            {STEPS.map((s) => (
-              <Card key={s.n} padding="xl" radius="lg" withBorder style={{ borderColor: '#e6e9ee' }}>
-                <Text fw={800} className="landing-gradient-text" style={{ fontSize: 32, letterSpacing: '-0.03em' }}>{s.n}</Text>
-                <Text fw={700} size="lg" mt="sm" mb={4}>{s.title}</Text>
-                <Text c="dimmed" size="sm" style={{ lineHeight: 1.55 }}>{s.text}</Text>
-              </Card>
+          <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="xl">
+            {MODULES.map((m) => (
+              <Box key={m.group} style={{ borderTop: `2px solid ${INK}`, paddingTop: 14 }}>
+                <Text fw={700} mb="sm" style={{ color: INK }}>{m.group}</Text>
+                <Stack gap={7}>
+                  {m.items.map((it) => (
+                    <Group key={it} gap={8} wrap="nowrap" align="center">
+                      <IconCheck size={15} color={ACCENT} style={{ flexShrink: 0 }} />
+                      <Text size="sm" c={MUTED}>{it}</Text>
+                    </Group>
+                  ))}
+                </Stack>
+              </Box>
             ))}
           </SimpleGrid>
         </Container>
       </Box>
 
-      {/* ===== SECURITY ===== */}
-      <Container size="lg" py={{ base: 56, md: 84 }} id="security">
-        <SimpleGrid cols={{ base: 1, md: 2 }} spacing={{ base: 32, md: 56 }} style={{ alignItems: 'center' }}>
-          <Stack gap="md">
-            <Badge variant="light" color="eruditBlue" radius="sm" style={{ alignSelf: 'flex-start' }}>Безопасность данных</Badge>
-            <Title order={2} style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', letterSpacing: '-0.025em' }}>
-              Доступ под контролем — это не обещание, а факт
-            </Title>
-            <Text c="dimmed" style={{ lineHeight: 1.6 }}>
-              Каждый видит только то, что нужно для его работы. Чувствительные данные
-              разграничены, а корректность подтверждена автоматическими тестами.
-            </Text>
-          </Stack>
-          <Card padding="xl" radius="lg" withBorder style={{ borderColor: '#e6e9ee' }}>
-            <Stack gap="sm">
-              {SECURITY.map((s) => (
-                <Group key={s} gap={12} wrap="nowrap" align="flex-start">
-                  <ThemeIcon size={26} radius="xl" variant="light" color="teal">
-                    <IconLock size={15} stroke={1.8} />
-                  </ThemeIcon>
-                  <Text size="sm" style={{ lineHeight: 1.5 }}>{s}</Text>
-                </Group>
-              ))}
-            </Stack>
-          </Card>
+      {/* ===== HOW IT WORKS ===== */}
+      <Container size="lg" py={{ base: 56, md: 88 }} id="how">
+        <Stack gap={8} align="center" mb={44}>
+          <Eyebrow>Как это работает</Eyebrow>
+          <Serif style={{ fontSize: 'clamp(26px, 3.5vw, 40px)', textAlign: 'center' }}>От демо до запуска</Serif>
+        </Stack>
+        <SimpleGrid cols={{ base: 1, md: 3 }} spacing={{ base: 24, md: 40 }}>
+          {STEPS.map((s) => (
+            <Box key={s.n} style={{ borderTop: `1px solid ${LINE}`, paddingTop: 20 }}>
+              <Box className="landing-serif" style={{ fontSize: 40, fontWeight: 700, color: ACCENT, lineHeight: 1 }}>{s.n}</Box>
+              <Text fw={700} size="lg" mt="sm" mb={4} style={{ color: INK }}>{s.title}</Text>
+              <Text c={MUTED} size="sm" style={{ lineHeight: 1.6 }}>{s.text}</Text>
+            </Box>
+          ))}
         </SimpleGrid>
       </Container>
 
-      {/* ===== PRICING ===== */}
-      <Box style={{ background: '#fbfcfe', borderTop: '1px solid #eef0f4' }}>
-        <Container size="lg" py={{ base: 56, md: 84 }} id="pricing">
-          <Stack gap={8} align="center" mb={44}>
-            <Badge variant="light" color="eruditBlue" radius="sm">Цена</Badge>
-            <Title order={2} ta="center" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', letterSpacing: '-0.025em' }}>
-              Прозрачно и без сюрпризов
-            </Title>
-          </Stack>
-          <Card padding={0} radius="lg" withBorder maw={560} mx="auto" style={{ borderColor: '#cfe2f7', overflow: 'hidden' }}>
-            <Box p="xl" style={{ background: 'linear-gradient(135deg, #228be6 0%, #1864ab 100%)', color: 'white' }}>
-              <Text fw={600} style={{ opacity: 0.9 }}>Всё рабочее ядро включено</Text>
-              <Group align="flex-end" gap={8} mt={6}>
-                <Text fw={800} style={{ fontSize: 44, lineHeight: 1, letterSpacing: '-0.03em' }}>30 000 сом</Text>
-                <Text pb={6} style={{ opacity: 0.9 }}>/ месяц</Text>
-              </Group>
-              <Text mt={6} style={{ opacity: 0.9 }}>+ установка $1000 разово</Text>
-            </Box>
-            <Stack p="xl" gap="sm">
-              {[
-                'Журнал, оценки, модерация, аудит',
-                'Расписание, замены, нагрузка и передача',
-                'Дневник, посещаемость, отчёты, аналитика',
-                'Кабинеты специалистов и 9 ролей',
-                'Ранний партнёр: новые модули — без доплат',
-              ].map((b) => (
-                <Group key={b} gap={10} wrap="nowrap" align="flex-start">
-                  <IconCheck size={18} color={BLUE} style={{ marginTop: 2, flexShrink: 0 }} />
-                  <Text size="sm" style={{ lineHeight: 1.5 }}>{b}</Text>
-                </Group>
-              ))}
-              <Button component={Link} href="/login" size="md" mt="sm" fullWidth rightSection={<IconArrowRight size={18} />}>
-                Смотреть демо
-              </Button>
+      {/* ===== SECURITY ===== */}
+      <Box style={{ background: '#fff', borderTop: `1px solid ${LINE}` }}>
+        <Container size="lg" py={{ base: 56, md: 88 }} id="security">
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing={{ base: 32, md: 64 }} style={{ alignItems: 'center' }}>
+            <Stack gap="md">
+              <Eyebrow>Безопасность данных</Eyebrow>
+              <Serif style={{ fontSize: 'clamp(24px, 3vw, 36px)', lineHeight: 1.18 }}>
+                Доступ под контролем — это факт, а не обещание
+              </Serif>
+              <Text c={MUTED} style={{ fontSize: 17, lineHeight: 1.65 }}>
+                Каждый видит только то, что нужно для его работы. Чувствительные данные
+                разграничены, а корректность подтверждена автоматическими тестами.
+              </Text>
             </Stack>
-          </Card>
+            <Card padding="xl" radius="md" withBorder style={{ borderColor: LINE, background: PAPER }}>
+              <Stack gap="sm">
+                {SECURITY.map((s) => (
+                  <Group key={s} gap={12} wrap="nowrap" align="flex-start">
+                    <ThemeIcon size={26} radius="xl" variant="light" color="teal">
+                      <IconLock size={15} stroke={1.8} />
+                    </ThemeIcon>
+                    <Text size="sm" style={{ lineHeight: 1.5, color: INK }}>{s}</Text>
+                  </Group>
+                ))}
+              </Stack>
+            </Card>
+          </SimpleGrid>
         </Container>
       </Box>
 
+      {/* ===== PRICING ===== */}
+      <Container size="lg" py={{ base: 56, md: 88 }} id="pricing">
+        <Stack gap={8} align="center" mb={44}>
+          <Eyebrow>Цена</Eyebrow>
+          <Serif style={{ fontSize: 'clamp(26px, 3.5vw, 40px)', textAlign: 'center' }}>Прозрачно и без сюрпризов</Serif>
+        </Stack>
+        <Card padding={0} radius="md" withBorder maw={560} mx="auto" style={{ borderColor: LINE, overflow: 'hidden', background: '#fff' }}>
+          <Box p="xl" className="landing-dark" style={{ color: '#fff' }}>
+            <Text style={{ opacity: 0.82 }}>Всё рабочее ядро включено</Text>
+            <Group align="flex-end" gap={10} mt={8}>
+              <Box className="landing-serif" style={{ fontSize: 46, fontWeight: 700, lineHeight: 1 }}>30 000 сом</Box>
+              <Text pb={6} style={{ opacity: 0.82 }}>/ месяц</Text>
+            </Group>
+            <Text mt={8} style={{ opacity: 0.82 }}>+ установка $1000 разово</Text>
+          </Box>
+          <Stack p="xl" gap="sm">
+            {[
+              'Журнал, оценки, модерация, аудит',
+              'Расписание, замены, нагрузка и передача',
+              'Дневник, посещаемость, отчёты, аналитика',
+              'Кабинеты специалистов и 9 ролей',
+              'Ранний партнёр: новые модули — без доплат',
+            ].map((b) => (
+              <Group key={b} gap={10} wrap="nowrap" align="flex-start">
+                <IconCheck size={18} color={ACCENT} style={{ marginTop: 2, flexShrink: 0 }} />
+                <Text size="sm" style={{ lineHeight: 1.5, color: INK }}>{b}</Text>
+              </Group>
+            ))}
+            <Button component={Link} href="/login" size="md" color="eruditBlue" mt="sm" fullWidth rightSection={<IconArrowRight size={18} />}>
+              Смотреть демо
+            </Button>
+          </Stack>
+        </Card>
+      </Container>
+
       {/* ===== CTA BAND ===== */}
-      <Box className="landing-dark">
-        <Container size="lg" py={{ base: 56, md: 76 }}>
+      <Box className="landing-photoband" style={{ backgroundImage: 'url(/landing/students.jpg)' }}>
+        <div className="landing-scrim" />
+        <Container size="lg" py={{ base: 64, md: 96 }} style={{ position: 'relative' }}>
           <Stack align="center" gap="lg">
-            <Title order={2} ta="center" c="white" style={{ fontSize: 'clamp(26px, 3.5vw, 40px)', letterSpacing: '-0.025em', maxWidth: 640 }}>
+            <Box className="landing-serif" component="h2" style={{ margin: 0, color: '#fff', fontWeight: 700, textAlign: 'center', fontSize: 'clamp(28px, 4vw, 46px)', lineHeight: 1.1, maxWidth: 680 }}>
               Посмотрите, как это работает в вашей школе
-            </Title>
-            <Text ta="center" style={{ color: 'rgba(255,255,255,0.7)', maxWidth: 520 }}>
+            </Box>
+            <Text ta="center" style={{ color: 'rgba(255,255,255,0.82)', maxWidth: 520 }}>
               Живое демо, без установки. Откройте и попробуйте прямо в браузере.
             </Text>
             <Group gap="sm">
-              <Button component={Link} href="/login" size="md" rightSection={<IconArrowRight size={18} />}>
-                Открыть демо
-              </Button>
-              <Button component="a" href="#features" size="md" variant="white" color="dark">
-                Узнать больше
-              </Button>
+              <Button component={Link} href="/login" size="md" color="eruditBlue" rightSection={<IconArrowRight size={18} />}>Открыть демо</Button>
+              <Button component="a" href="#features" size="md" variant="white" color="dark">Узнать больше</Button>
             </Group>
           </Stack>
         </Container>
@@ -349,67 +354,20 @@ export default function LandingPage() {
           <Group gap={10}>
             <div className="brand-mark" style={{ width: 30, height: 30, fontSize: 14, borderRadius: 8 }}>B</div>
             <Stack gap={0}>
-              <Text fw={700} size="sm" style={{ letterSpacing: '-0.02em' }}>Bilim OS</Text>
-              <Text size="xs" c="dimmed">Система управления школой</Text>
+              <Text fw={700} size="sm" style={{ letterSpacing: '-0.02em', color: INK }}>Bilim OS</Text>
+              <Text size="xs" c={MUTED}>Система управления школой</Text>
             </Stack>
           </Group>
-          <Text size="xs" c="dimmed" ta="right">© 2026 Bilim OS · Разработано Asystem</Text>
+          <Text size="xs" c={MUTED} ta="right">© 2026 Bilim OS · Разработано Asystem</Text>
         </Group>
-        <Divider my="md" color="#eef0f4" />
-        <Group gap={8} mt={2}>
-          <Text size="xs" c="dimmed">Контакт для школ:</Text>
-          <Anchor href="tel:+996700144043" size="xs" c="dimmed" underline="hover">+996 700 144 043</Anchor>
-          <Text size="xs" c="dimmed">·</Text>
-          <Anchor href="mailto:Asystem@gmail.com" size="xs" c="dimmed" underline="hover">Asystem@gmail.com</Anchor>
+        <hr className="landing-rule" style={{ margin: '16px 0' }} />
+        <Group gap={8}>
+          <Text size="xs" c={MUTED}>Контакт для школ:</Text>
+          <Anchor href="tel:+996700144043" size="xs" c={MUTED} underline="hover">+996 700 144 043</Anchor>
+          <Text size="xs" c={MUTED}>·</Text>
+          <Anchor href="mailto:Asystem@gmail.com" size="xs" c={MUTED} underline="hover">Asystem@gmail.com</Anchor>
         </Group>
       </Container>
-    </Box>
-  );
-}
-
-/* ---------- Hero product preview (reuses product visual language) ---------- */
-function HeroMock() {
-  const grades: Array<{ v: string; g: string }> = [
-    { v: '5', g: 'g5' }, { v: '4', g: 'g4' }, { v: '5', g: 'g5' },
-    { v: '4', g: 'g4' }, { v: '3', g: 'g3' }, { v: '5', g: 'g5' },
-  ];
-  const strips = [
-    { t: 'Математика · 08:30', c: '#e7f5ff', tc: '#1864ab' },
-    { t: 'Русский язык · 09:25', c: '#e6fcf5', tc: '#0c8599' },
-    { t: 'История · 10:20', c: '#fff0f6', tc: '#c2255c' },
-  ];
-  return (
-    <Box className="landing-mock">
-      <div className="landing-mock-bar">
-        <span className="landing-dot" style={{ background: '#ff5f57' }} />
-        <span className="landing-dot" style={{ background: '#febc2e' }} />
-        <span className="landing-dot" style={{ background: '#28c840' }} />
-        <span className="landing-pill">bilim-os · 7А · журнал</span>
-      </div>
-      <Box p="lg">
-        <SimpleGrid cols={3} spacing="sm" mb="md">
-          {[['Ср. балл', '4.6'], ['Посещ.', '94%'], ['Учеников', '28']].map(([l, v]) => (
-            <Card key={l} padding="sm" radius="md" withBorder style={{ borderColor: '#eef0f4' }}>
-              <Text size="xs" c="dimmed">{l}</Text>
-              <Text className="kpi-value" style={{ fontSize: 22 }}>{v}</Text>
-            </Card>
-          ))}
-        </SimpleGrid>
-
-        <Text size="xs" c="dimmed" fw={600} tt="uppercase" mb={8} style={{ letterSpacing: '0.04em' }}>Оценки за неделю</Text>
-        <Group gap={8} mb="md">
-          {grades.map((g, i) => (
-            <span key={i} className={`grade-chip ${g.g}`}>{g.v}</span>
-          ))}
-        </Group>
-
-        <Text size="xs" c="dimmed" fw={600} tt="uppercase" mb={8} style={{ letterSpacing: '0.04em' }}>Расписание</Text>
-        <Stack gap={8}>
-          {strips.map((s) => (
-            <div key={s.t} className="landing-strip" style={{ background: s.c, color: s.tc }}>{s.t}</div>
-          ))}
-        </Stack>
-      </Box>
     </Box>
   );
 }
