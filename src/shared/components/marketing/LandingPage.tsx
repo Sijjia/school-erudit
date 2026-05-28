@@ -110,13 +110,13 @@ export default function LandingPage() {
               <Text fw={700} size="lg" style={{ letterSpacing: '-0.02em', color: INK }}>Bilim OS</Text>
             </Group>
             <Group gap={28} visibleFrom="sm">
-              <Anchor href="#features" c={MUTED} fw={500} size="sm" underline="never">Возможности</Anchor>
-              <Anchor href="#modules" c={MUTED} fw={500} size="sm" underline="never">Модули</Anchor>
-              <Anchor href="#how" c={MUTED} fw={500} size="sm" underline="never">Как это работает</Anchor>
-              <Anchor href="#pricing" c={MUTED} fw={500} size="sm" underline="never">Цена</Anchor>
+              <Anchor href="#features" c="#46403a" fw={600} size="sm" underline="never">Возможности</Anchor>
+              <Anchor href="#modules" c="#46403a" fw={600} size="sm" underline="never">Модули</Anchor>
+              <Anchor href="#how" c="#46403a" fw={600} size="sm" underline="never">Как это работает</Anchor>
+              <Anchor href="#pricing" c="#46403a" fw={600} size="sm" underline="never">Цена</Anchor>
             </Group>
             <Group gap={8}>
-              <Button component={Link} href="/login" variant="subtle" color="gray" size="sm" visibleFrom="xs">Войти</Button>
+              <Button component={Link} href="/login" variant="default" size="sm" visibleFrom="xs" styles={{ label: { color: INK } }}>Войти</Button>
               <Button component={Link} href="/login" size="sm" color="eruditBlue" rightSection={<IconArrowRight size={16} />}>Смотреть демо</Button>
             </Group>
           </Group>
@@ -143,7 +143,7 @@ export default function LandingPage() {
               <Button component={Link} href="/login" size="md" color="eruditBlue" rightSection={<IconArrowRight size={18} />}>
                 Смотреть демо
               </Button>
-              <Button component="a" href="#pricing" size="md" variant="white" color="dark">
+              <Button component="a" href="#pricing" size="md" variant="white" styles={{ label: { color: INK, fontWeight: 600 } }}>
                 Цена и условия
               </Button>
             </Group>
@@ -342,7 +342,7 @@ export default function LandingPage() {
             </Text>
             <Group gap="sm">
               <Button component={Link} href="/login" size="md" color="eruditBlue" rightSection={<IconArrowRight size={18} />}>Открыть демо</Button>
-              <Button component="a" href="#features" size="md" variant="white" color="dark">Узнать больше</Button>
+              <Button component="a" href="#features" size="md" variant="white" styles={{ label: { color: INK, fontWeight: 600 } }}>Узнать больше</Button>
             </Group>
           </Stack>
         </Container>
