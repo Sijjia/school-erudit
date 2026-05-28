@@ -8,42 +8,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        display: ['Manrope', 'sans-serif'],
-                    },
-                    colors: {
-                        primary: {
-                            DEFAULT: '#1971C2',
-                            light: '#228be6',
-                            dark: '#1864AB'
-                        },
-                        bg: '#FAFBFD',
-                        graphite: {
-                            900: '#1a1d20',
-                            800: '#2d3136',
-                            600: '#4a5056',
-                        }
-                    },
-                    boxShadow: {
-                        'soft': '0 10px 40px -10px rgba(0,0,0,0.05)',
-                        'glow': '0 0 20px rgba(25, 113, 194, 0.3)',
-                    }
-                }
-            }
-        }
-    </script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
-    
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Self-hosted Tailwind build (no runtime CDN). Compiled from docs/landing-build/. -->
+    <link rel="stylesheet" href="/landing.css">
+
+    <!-- Self-hosted JS (no runtime CDN). Sourced into public/vendor/. -->
+    <script src="/vendor/gsap.min.js"></script>
+    <script src="/vendor/ScrollTrigger.min.js"></script>
+
+    <script src="/vendor/lucide.min.js"></script>
 
     <style>
         body {
@@ -248,6 +221,22 @@
                         Цена и условия
                     </a>
                 </div>
+
+                <!-- Product preview: framed browser-window mockup of the live dashboard -->
+                <div class="mt-16 w-full max-w-[900px] mx-auto">
+                    <div class="rounded-2xl bg-white border border-gray-200 shadow-soft overflow-hidden">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-100">
+                            <span class="w-3 h-3 rounded-full bg-red-400"></span>
+                            <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+                            <span class="w-3 h-3 rounded-full bg-green-400"></span>
+                            <span class="ml-4 hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white border border-gray-200 text-xs text-graphite-600">
+                                <i data-lucide="lock" class="w-3 h-3"></i>
+                                bilim-os · Главная
+                            </span>
+                        </div>
+                        <img src="/landing/dashboard.png" alt="Интерфейс Bilim OS" class="w-full h-auto block" loading="eager" />
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -292,42 +281,42 @@
 
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div class="glass-card p-8 rounded-[2rem] reveal-up">
-                    <div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6">
+                    <div class="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center text-white mb-6 shadow-glow">
                         <i data-lucide="book-open-check" class="w-7 h-7"></i>
                     </div>
                     <h3 class="font-display text-xl font-bold mb-3">Электронный журнал и оценивание</h3>
                     <p class="text-graphite-600 text-sm leading-relaxed">Категории, средневзвешенный балл. Полный контроль успеваемости в реальном времени.</p>
                 </div>
                 <div class="glass-card p-8 rounded-[2rem] reveal-up">
-                    <div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6">
+                    <div class="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center text-white mb-6 shadow-glow">
                         <i data-lucide="shield-check" class="w-7 h-7"></i>
                     </div>
                     <h3 class="font-display text-xl font-bold mb-3">Двухуровневая модерация</h3>
                     <p class="text-graphite-600 text-sm leading-relaxed">Модерация оценок + журнал аудита. Маршрут: учитель → завуч → публикация.</p>
                 </div>
                 <div class="glass-card p-8 rounded-[2rem] reveal-up">
-                    <div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6">
+                    <div class="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center text-white mb-6 shadow-glow">
                         <i data-lucide="calendar-clock" class="w-7 h-7"></i>
                     </div>
                     <h3 class="font-display text-xl font-bold mb-3">Расписание и звонки</h3>
                     <p class="text-graphite-600 text-sm leading-relaxed">Удобное составление расписания, управление звонками и оперативные замены уроков.</p>
                 </div>
                 <div class="glass-card p-8 rounded-[2rem] reveal-up">
-                    <div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6">
+                    <div class="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center text-white mb-6 shadow-glow">
                         <i data-lucide="users" class="w-7 h-7"></i>
                     </div>
                     <h3 class="font-display text-xl font-bold mb-3">Нагрузка педагогов</h3>
                     <p class="text-graphite-600 text-sm leading-relaxed">Контроль и передача нагрузки (декрет/болезнь) с сохранением полной истории изменений.</p>
                 </div>
                 <div class="glass-card p-8 rounded-[2rem] reveal-up">
-                    <div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6">
+                    <div class="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center text-white mb-6 shadow-glow">
                         <i data-lucide="smartphone" class="w-7 h-7"></i>
                     </div>
                     <h3 class="font-display text-xl font-bold mb-3">Дневник для учеников</h3>
                     <p class="text-graphite-600 text-sm leading-relaxed">Ученики и родители видят только свои данные. Прозрачная связь со школой.</p>
                 </div>
                 <div class="glass-card p-8 rounded-[2rem] reveal-up">
-                    <div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6">
+                    <div class="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center text-white mb-6 shadow-glow">
                         <i data-lucide="bar-chart-3" class="w-7 h-7"></i>
                     </div>
                     <h3 class="font-display text-xl font-bold mb-3">Аналитика по школе</h3>
