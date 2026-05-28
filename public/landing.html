@@ -180,9 +180,21 @@
             }
         }
 
-        /* Initial state for reveal animations */
-        .reveal-up { opacity: 0; visibility: hidden; }
+        /* Initial state for reveal animations — gated by .js-reveal so content is never blank if scripts fail */
+        .js-reveal .reveal-up { opacity: 0; visibility: hidden; }
     </style>
+    <script>
+      // Hide reveal blocks only if JS runs; failsafe un-hides if GSAP never loads (CDN blocked).
+      document.documentElement.classList.add('js-reveal');
+      window.addEventListener('load', function () {
+        setTimeout(function () {
+          if (typeof window.gsap === 'undefined' || typeof window.ScrollTrigger === 'undefined') {
+            document.documentElement.classList.remove('js-reveal');
+            document.querySelectorAll('.counter').forEach(function (c) { c.innerHTML = c.getAttribute('data-target'); });
+          }
+        }, 1200);
+      });
+    </script>
 </head>
 <body class="antialiased selection:bg-primary-light selection:text-white">
 
@@ -614,9 +626,14 @@
     </footer>
 
     <script>
-        // Initialize Lucide Icons
-        lucide.createIcons();
+        // Initialize Lucide Icons (don't break the page if its CDN fails)
+        try { if (window.lucide) lucide.createIcons(); } catch (e) {}
 
+        // If GSAP/ScrollTrigger didn't load (CDN blocked) — show content without animation, stop here.
+        if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') {
+            document.documentElement.classList.remove('js-reveal');
+            document.querySelectorAll('.counter').forEach((c) => { c.innerHTML = c.getAttribute('data-target'); });
+        } else {
         // Register GSAP ScrollTrigger
         gsap.registerPlugin(ScrollTrigger);
 
@@ -698,6 +715,7 @@
                 });
             }
         });
+        }
     </script>
 </body>
 </html>
