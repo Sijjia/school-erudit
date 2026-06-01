@@ -53,12 +53,22 @@ const roleOf = async (uid) => (await db`SELECT role FROM "User" WHERE id = ${uid
     const g = await post('/api/v1/grading', { studentId: s1.sid, subjectId: s1.subj, categoryId, teacherId, periodId, value: 2, scale: 'FIVE', date: new Date().toISOString().slice(0, 10), comment: 'agent e2e' });
     console.log('  POST оценки "2":', g.status);
     await sleep(1500);
-    const items = await db.query(`SELECT kind, "forUserId" FROM "AgentItem" WHERE "studentId"=$1 AND "ruleKey"='low-grade-parent-alert' ${recent}`, [s1.sid]);
+    // Фаза C: ожидаем ЧЕРНОВИК письма учителю (не прямой алерт родителю)
+    const drafts = await db.query(`SELECT id, kind, "forUserId" FROM "AgentItem" WHERE "studentId"=$1 AND "ruleKey"='low-grade-parent-alert' AND kind='draft' ${recent} ORDER BY "createdAt" DESC`, [s1.sid]);
+    const draft = drafts[0];
+    console.log(`  ${draft && draft.forUserId === teacherUserId ? '✅' : '❌'} черновик письма учителю (на согласование)`);
     const parents = (await db.query(`SELECT p."userId" AS uid FROM "ParentStudent" ps JOIN "Parent" p ON p.id=ps."parentId" WHERE ps."studentId"=$1`, [s1.sid])).map((x) => x.uid);
-    const taskToTeacher = items.find((it) => it.kind === 'task' && it.forUserId === teacherUserId);
-    const alertToParent = items.find((it) => it.kind === 'alert' && parents.includes(it.forUserId));
-    console.log(`  ${taskToTeacher ? '✅' : '❌'} task учителю (forUser=matematik)`);
-    console.log(`  ${alertToParent ? '✅' : '❌'} alert родителю (forUser=родитель, роль=${alertToParent ? await roleOf(alertToParent.forUserId) : '—'})`);
+    // до согласования родителю ничего не ушло
+    const beforeApprove = await db.query(`SELECT id FROM "AgentItem" WHERE "studentId"=$1 AND kind='alert' AND "forUserId" = ANY($2) ${recent}`, [s1.sid, parents]);
+    console.log(`  ${beforeApprove.length === 0 ? '✅' : '❌'} до согласования родителю НЕ отправлено`);
+    // учитель согласовывает
+    if (draft) {
+      const ap = await post(`/api/v1/agent/items/${draft.id}/approve`, { message: 'Согласовано (e2e тест): обратите внимание на тему.' });
+      console.log('  POST approve:', ap.status);
+      await sleep(1000);
+      const afterApprove = await db.query(`SELECT "forUserId" FROM "AgentItem" WHERE "studentId"=$1 AND kind='alert' AND "forUserId" = ANY($2) ${recent}`, [s1.sid, parents]);
+      console.log(`  ${afterApprove.length > 0 ? '✅' : '❌'} после согласования письмо ушло родителю (роль=${afterApprove[0] ? await roleOf(afterApprove[0].forUserId) : '—'})`);
+    }
   }
 
   // ── Сценарий 2: пропуски ──

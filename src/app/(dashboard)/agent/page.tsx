@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActionIcon, Alert, Badge, Button, Card, Group, Loader, Stack, Switch, Text, Title,
+  ActionIcon, Alert, Badge, Button, Card, Group, Loader, Stack, Switch, Text, Textarea, Title,
 } from '@mantine/core';
 import {
   IconRobot, IconAlertTriangle, IconChecklist, IconBulb, IconMail, IconCheck, IconX, IconPlayerPlay,
-  IconBrandTelegram,
+  IconBrandTelegram, IconSend,
 } from '@tabler/icons-react';
 
 interface Item {
@@ -34,6 +34,7 @@ export default function AgentPanelPage() {
   const [showAll, setShowAll] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [tg, setTg] = useState<{ configured: boolean; linked: boolean; url: string | null } | null>(null);
+  const [edits, setEdits] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/v1/agent/items${showAll ? '?status=all' : ''}`);
@@ -57,6 +58,19 @@ export default function AgentPanelPage() {
       await fetch(`/api/v1/agent/items/${id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
+      });
+      await load();
+    } finally {
+      setBusy(null);
+    }
+  }, [load]);
+
+  const approve = useCallback(async (id: string, message: string) => {
+    setBusy(id);
+    try {
+      await fetch(`/api/v1/agent/items/${id}/approve`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
       });
       await load();
     } finally {
@@ -112,11 +126,11 @@ export default function AgentPanelPage() {
                     </Badge>
                     <div style={{ minWidth: 0 }}>
                       <Text fw={600}>{it.title}</Text>
-                      <Text size="sm" c="dimmed">{it.body}</Text>
+                      {it.kind !== 'draft' && <Text size="sm" c="dimmed">{it.body}</Text>}
                       <Text size="xs" c="dimmed" mt={4}>{fmt(it.createdAt)}{it.status !== 'new' ? ` · ${it.status}` : ''}</Text>
                     </div>
                   </Group>
-                  {!closed && (
+                  {!closed && it.kind !== 'draft' && (
                     <Group gap={4} wrap="nowrap">
                       {it.status === 'new' && (
                         <ActionIcon variant="subtle" color="blue" title="В работу" loading={busy === it.id} onClick={() => act(it.id, 'in_progress')}>
@@ -132,6 +146,23 @@ export default function AgentPanelPage() {
                     </Group>
                   )}
                 </Group>
+                {!closed && it.kind === 'draft' && (
+                  <Stack gap="xs" mt="sm">
+                    <Textarea
+                      autosize minRows={3}
+                      value={edits[it.id] ?? it.body}
+                      onChange={(e) => setEdits((p) => ({ ...p, [it.id]: e.currentTarget.value }))}
+                    />
+                    <Group justify="flex-end" gap="xs">
+                      <Button variant="default" size="xs" leftSection={<IconX size={14} />} loading={busy === it.id} onClick={() => act(it.id, 'dismissed')}>
+                        Отклонить
+                      </Button>
+                      <Button size="xs" color="green" leftSection={<IconSend size={14} />} loading={busy === it.id} onClick={() => approve(it.id, edits[it.id] ?? it.body)}>
+                        Согласовать и отправить
+                      </Button>
+                    </Group>
+                  </Stack>
+                )}
               </Card>
             );
           })}

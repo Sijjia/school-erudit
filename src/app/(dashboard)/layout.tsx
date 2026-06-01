@@ -14,6 +14,7 @@ import {
   Badge,
   Box,
   Group,
+  Indicator,
   Menu,
   NavLink,
   ScrollArea,
@@ -157,6 +158,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const { role, login } = useRole();
   const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] = useDisclosure();
+  const [agentCount, setAgentCount] = useState(0);
+
+  // Счётчик непрочитанных элементов Панели агента (колокольчик)
+  useEffect(() => {
+    let active = true;
+    const fetchCount = () => {
+      fetch('/api/v1/agent/items')
+        .then((r) => r.json())
+        .then((j) => { if (active && j.success) setAgentCount(j.data.newCount ?? 0); })
+        .catch(() => {});
+    };
+    fetchCount();
+    const t = setInterval(fetchCount, 60000);
+    return () => { active = false; clearInterval(t); };
+  }, [pathname]);
 
   // Student/parent → redirect to diary instead of dashboard
   useEffect(() => {
@@ -200,9 +216,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             <Group gap="md">
               <Box visibleFrom="sm"><UniversalSearch /></Box>
-              <ActionIcon variant="subtle" color="gray" size="lg" visibleFrom="sm">
-                <IconBell size={20} stroke={1.5} />
-              </ActionIcon>
+              <Indicator
+                color="red" size={16} offset={4} disabled={agentCount === 0}
+                label={agentCount > 9 ? '9+' : agentCount} visibleFrom="sm"
+              >
+                <ActionIcon
+                  component={Link} href="/agent" variant="subtle"
+                  color={agentCount > 0 ? 'blue' : 'gray'} size="lg"
+                  aria-label="Панель агента"
+                >
+                  <IconBell size={20} stroke={1.5} />
+                </ActionIcon>
+              </Indicator>
               <Menu shadow="md" width={220} position="bottom-end" withArrow>
                 <Menu.Target>
                   <Group gap={8} style={{ cursor: 'pointer' }}>

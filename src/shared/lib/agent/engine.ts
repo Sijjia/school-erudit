@@ -31,14 +31,14 @@ async function ruleEnabled(key: string): Promise<boolean> {
   return rule ? rule.enabled : true; // нет строки = правило активно по умолчанию
 }
 
-async function createItem(args: {
-  ruleKey: string; eventId?: string | null; forUserId?: string | null; forRole?: string | null;
+export async function createItem(args: {
+  ruleKey?: string | null; eventId?: string | null; forUserId?: string | null; forRole?: string | null;
   studentId?: string | null; kind: string; severity?: string; title: string; body: string;
   payload?: Record<string, unknown>;
 }) {
   const item = await prisma.agentItem.create({
     data: {
-      ruleKey: args.ruleKey, eventId: args.eventId ?? null,
+      ruleKey: args.ruleKey ?? null, eventId: args.eventId ?? null,
       forUserId: args.forUserId ?? null, forRole: args.forRole ?? null,
       studentId: args.studentId ?? null, kind: args.kind, severity: args.severity ?? 'info',
       title: args.title, body: args.body.slice(0, 2000),
@@ -91,23 +91,26 @@ async function ruleLowGrade(eventId: string, ctx: EventCtx) {
   const who = await studentLabel(ctx.studentId);
   const subjName = subject?.name ? ` по предмету «${subject.name}»` : '';
 
-  // 1) алерт родителю(ям)
-  for (const uid of await parentUserIds(ctx.studentId)) {
-    await createItem({
-      ruleKey: key, eventId, forUserId: uid, studentId: ctx.studentId, kind: 'alert', severity: 'warn',
-      title: 'Низкая оценка у ребёнка',
-      body: `${who} получил(а) низкую оценку (${value})${subjName}. Рекомендуем разобрать тему дома и при необходимости связаться с учителем.`,
-      payload: { value, scale, subjectId },
-    });
-  }
-  // 2) задача учителю — связаться с родителями
+  const parents = await parentUserIds(ctx.studentId);
+  const message = `Здравствуйте! ${who} получил(а) низкую оценку (${value})${subjName}. Рекомендуем уделить внимание этой теме дома; при вопросах — свяжитесь с учителем.`;
+
+  // Исходящее наружу — через согласование (Фаза C): черновик письма учителю.
+  // Учитель проверяет/правит и подтверждает → письмо уходит родителю(ям).
   if (ctx.actorUserId) {
     await createItem({
-      ruleKey: key, eventId, forUserId: ctx.actorUserId, studentId: ctx.studentId, kind: 'task', severity: 'info',
-      title: 'Связаться с родителями (низкая оценка)',
-      body: `${who} — низкая оценка (${value})${subjName}. Свяжитесь с родителями или дайте рекомендации.`,
-      payload: { value, scale, subjectId },
+      ruleKey: key, eventId, forUserId: ctx.actorUserId, studentId: ctx.studentId, kind: 'draft', severity: 'warn',
+      title: 'Письмо родителю — на согласование',
+      body: message,
+      payload: { proposedMessage: message, parentUserIds: parents, value, scale, subjectId },
     });
+  } else {
+    // нет инициатора (системное событие) — прямой алерт родителю(ям)
+    for (const uid of parents) {
+      await createItem({
+        ruleKey: key, eventId, forUserId: uid, studentId: ctx.studentId, kind: 'alert', severity: 'warn',
+        title: 'Низкая оценка у ребёнка', body: message, payload: { value, scale, subjectId },
+      });
+    }
   }
 }
 
