@@ -66,7 +66,9 @@ export const SIDEBAR_NAV: NavRoute[] = [
   {
     href: '/grading',
     label: 'Оценивание',
-    roles: STAFF_TIER,
+    // Учителю/куратору не показываем — у них простые «Сегодня» и «Журнал».
+    // Это аналитический/контрольный экран для администрации.
+    roles: ADMIN_AND_VICE,
     children: [
       { href: '/grading/categories', label: 'Категории оценок', roles: ADMIN_AND_VICE },
       { href: '/grading/moderation', label: 'Модерация', roles: ADMIN_AND_VICE },
