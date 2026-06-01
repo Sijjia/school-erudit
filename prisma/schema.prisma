@@ -1176,3 +1176,23 @@ model TestAnswer {
 
   @@index([attemptId])
 }
+
+/// ИИ-генератор презентаций (мультимодальный оркестратор учителя).
+/// Учитель вводит тему → LLM (OpenRouter) выдаёт структурированные слайды.
+model Presentation {
+  id         String   @id @default(cuid())
+  title      String
+  topic      String   @db.VarChar(500)
+  subject    String?  @db.VarChar(200)
+  gradeLevel String?  @db.VarChar(100)
+  emphasis   String?  @db.VarChar(500)
+  /// Массив слайдов: [{ title, bullets: string[], notes?: string }]
+  slides     Json
+  /// Модель LLM, выдавшая результат (или 'stub' если ключа не было).
+  model      String?
+  authorId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([authorId])
+}

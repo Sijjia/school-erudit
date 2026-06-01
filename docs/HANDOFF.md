@@ -17,6 +17,7 @@ Bilim OS — школьная ERP (Next.js 16 App Router + Prisma + Postgres + M
 - **Privacy учителя server-side** — `src/shared/lib/teacher-scope.ts` (`getTeacherScope`): свои классы/замены, чужой classId → 403.
 - **Модули EduPage:** заявления/записка об отсутствии (`/applications`), опросы (`/surveys`), заказ столовой (`/meals`), согласия родителей (`/consents`), бюро находок (`/lost-found`), ДЗ «выполнено» + подпись оценки (в `/diary`), **тесты с автопроверкой (`/tests`, Модуль 8)**.
 - Раньше (тот же день): 15 бывших ComingSoon-страниц превращены в реальные модули.
+- **ИИ-генератор презентаций (`/presentations`, фаза 1 агентской системы, 2026-06-01)** — учитель вводит тему/предмет/класс/акцент → LLM (OpenRouter, REST) отдаёт структурированные слайды (title+bullets+notes) → просмотр + экспорт `.pptx` (pptxgenjs). Провайдер-агностичен через `src/shared/lib/ai/presentation.ts`; без `OPENROUTER_API_KEY` работает на детерминированном стабе (демо-каркас). Модель — `OPENROUTER_MODEL` (default `anthropic/claude-3.5-sonnet`). Таблица `Presentation` (миграция `20260601000000_ai_presentations`). API: `src/app/api/v1/ai/presentations/{route,[id]/route,[id]/pptx/route}.ts`.
 
 ## Что ОСТАЛОСЬ / идеи (см. teardown)
 - Подтянуть тему урока из КТП одним кликом (сейчас free-text).
