@@ -1,9 +1,9 @@
 import pptxgen from 'pptxgenjs';
 
-const ACCENT = 'E91E8C';
+const ACCENT = '1971C2';
 const DARK = '1A1B1E';
 const GREY = '5A5A5A';
-const LIGHT = 'F7E9F1';
+const LIGHT = 'E7F1FB';
 const GREEN = '1E9E5A';
 const URL = 'https://erudit-school.vercel.app';
 const PWD = 'erudit2025';

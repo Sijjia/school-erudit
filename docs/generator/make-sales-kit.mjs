@@ -4,12 +4,12 @@ import {
 } from 'docx';
 import { writeFileSync } from 'node:fs';
 
-const ACCENT = 'E91E8C';
+const ACCENT = '1971C2';
 const DARK = '1A1B1E';
 const GREY = '666666';
 const GREEN = '1E9E5A';
 const RED = 'C0392B';
-const LIGHT = 'F4E8F0';
+const LIGHT = 'E7F1FB';
 
 const URL = 'https://erudit-school.vercel.app';
 const DEMO = URL + '/login';
@@ -39,6 +39,12 @@ const bullet = (t, lvl = 0) => new Paragraph({
 const numbered = (t) => new Paragraph({
   numbering: { reference: 'steps', level: 0 }, spacing: { after: 70, line: 268 },
   children: (Array.isArray(t) ? t : [new TextRun({ text: t, size: 22, color: DARK })]),
+});
+
+const divider = (t) => new Paragraph({
+  heading: HeadingLevel.HEADING_1, spacing: { before: 0, after: 160 },
+  border: { bottom: { color: ACCENT, size: 8, style: BorderStyle.SINGLE, space: 6 } },
+  children: [new TextRun({ text: t, bold: true, size: 30, color: ACCENT })],
 });
 
 function brandTitle(sub) {
@@ -148,9 +154,8 @@ async function buildKP() {
 }
 
 /* ============ 2. СКРИПТ ПРОДАЖ + ВОЗРАЖЕНИЯ ============ */
-async function buildScript() {
+function secScript() {
   const c = [];
-  c.push(...brandTitle('Скрипт встречи и обработка возражений · для продажника'));
   c.push(
     H1('1. Цель встречи'),
     P('Договориться о следующем шаге — демо с данными школы или пилот. Не «продать сразу», а показать рабочий инструмент и снять сомнения честно.'),
@@ -201,13 +206,12 @@ async function buildScript() {
     bullet('Не выдумывать функции, которых нет.'),
     bullet('Не извиняться за молодость продукта — это преимущество раннего партнёра.'),
   );
-  await build('../Bilim_OS_скрипт_продаж.docx', 'Bilim OS — скрипт продаж и возражения', c);
+  return c;
 }
 
 /* ============ 3. СРАВНЕНИЕ КОНКУРЕНТОВ ============ */
-async function buildCompare() {
+function secCompare() {
   const c = [];
-  c.push(...brandTitle('Сравнение с другими решениями · для продажника'));
   c.push(
     P([bold('Главное: '), txt('Кундолюк — не конкурент. Это государственный реестр, обязательный для школ по закону (отчётность в МОиН). Мы его не заменяем — планируем интеграцию и договорённость. Bilim OS закрывает ежедневную операционную работу, которой в Кундолюке нет.')]),
     P('EduPage и Zero даны для контекста: EduPage — зарубежная школьная платформа, Zero — казахстанский продукт про бизнес образовательного центра (CRM, финансы).'),
@@ -236,13 +240,12 @@ async function buildCompare() {
     bullet('EduPage: «Похожая идея, но мы локальные, на вашем языке, с модерацией оценок и поддержкой рядом.»'),
     bullet('Zero: «Это про деньги и CRM центра. Мы — про качество учебного процесса и академическое управление.»'),
   );
-  await build('../Bilim_OS_сравнение_конкурентов.docx', 'Bilim OS — сравнение с другими решениями', c);
+  return c;
 }
 
 /* ============ 4. ONBOARDING + БЕЗОПАСНОСТЬ ============ */
-async function buildOnboarding() {
+function secOnboarding() {
   const c = [];
-  c.push(...brandTitle('Запуск школы и безопасность данных'));
   c.push(
     H1('Часть A. Быстрый запуск школы'),
     P('Порядок настройки — от справочников к расписанию и доступам. Базовую настройку обычно проходят за один-два рабочих дня.'),
@@ -258,7 +261,7 @@ async function buildOnboarding() {
     new Paragraph({ children: [new PageBreak()] }),
     H1('Часть B. Данные и безопасность'),
     H2('Где хранятся данные'),
-    bullet('Хостинг приложения — Vercel; база данных — Neon Postgres.'),
+    bullet('Приложение на защищённом облачном хостинге; база данных — Neon Postgres.'),
     bullet('Доступ к системе — по индивидуальным логинам, сессии защищены.'),
     H2('Разграничение доступа'),
     bullet('9 ролей: каждый видит только свой набор разделов.'),
@@ -271,13 +274,12 @@ async function buildOnboarding() {
     H2('Честно'),
     P('Продукт молодой и активно дорабатывается. Безопасность и разграничение доступа — приоритет ядра и работают уже сегодня. Демо-данные вымышленные; реальные данные школы изолированы от демо.'),
   );
-  await build('../Bilim_OS_onboarding_безопасность.docx', 'Bilim OS — запуск и безопасность', c);
+  return c;
 }
 
 /* ============ 5. ШПАРГАЛКА ПРОДАЖНИКА (источник правды) ============ */
-async function buildCheatsheet() {
+function secCheatsheet() {
   const c = [];
-  c.push(...brandTitle('Шпаргалка продажника · ответ за 30 секунд'));
   c.push(
     P([new TextRun({ text: 'Правило: ', bold: true, size: 22, color: ACCENT }), txt('ответ есть здесь — отвечаешь сама. Нет — записываешь вопрос, отвечаем раз в неделю пачкой. По одному вопросу не дёргаем.')]),
 
@@ -315,7 +317,7 @@ async function buildCheatsheet() {
         ['«Продукт молодой / сырой»', 'Ядро работает с первого дня — покажу вживую. Ранний партнёр влияет на дорожную карту.'],
         ['«Нет мобильного приложения»', 'Работает в браузере на телефоне без установки. Нативное — в планах.'],
         ['«А ИИ / бухгалтерия / питание?»', 'На дорожной карте. Дат не называю; ядро уже полноценное.'],
-        ['«Что с безопасностью данных?»', 'Доступ по 9 ролям, проверен автотестами; ученик/родитель видят только своё. Хостинг Vercel + база Neon.'],
+        ['«Что с безопасностью данных?»', 'Доступ по 9 ролям, проверен автотестами; ученик/родитель видят только своё. Защищённый облачный хостинг; база Neon Postgres.'],
         ['«Можно попробовать?»', 'Да, живое демо — ссылка, пароль и готовые аккаунты ниже.'],
         ['«Что будет через год?»', 'Дорожная карта; ранний партнёр получает новые модули без доплат.'],
       ],
@@ -343,13 +345,12 @@ async function buildCheatsheet() {
     ),
     P([new TextRun({ text: 'Порядок показа: Учитель → Завуч → Родитель (виден весь цикл оценки). НЕ открывать разделы со «Скоро» и карточку конкретного педагога.', italics: true, size: 20, color: GREY })]),
   );
-  await build('../Bilim_OS_шпаргалка_продажника.docx', 'Bilim OS — шпаргалка продажника', c);
+  return c;
 }
 
 /* ============ 6. ДЕМО-СЦЕНАРИЙ (для встречи с директором) ============ */
-async function buildDemoScript() {
+function secDemo() {
   const c = [];
-  c.push(...brandTitle('Демо-сценарий · встреча с директором школы'));
   c.push(
     P([txt('Цель: за 20–30 минут показать живой продукт и подвести директора к бесплатному пилоту. Первый клиент — Intellect Pro (через Эмира).')]),
 
@@ -395,13 +396,28 @@ async function buildDemoScript() {
     bullet('Оставьте КП и шпаргалку; контакт: +996 700 144 043 · Asystem@gmail.com.'),
     P([new TextRun({ text: 'Тайминг: вступление 3 мин · показ 15–20 мин · вопросы и договорённость 5–7 мин.', italics: true, size: 20, color: GREY })]),
   );
-  await build('../Bilim_OS_демо_сценарий.docx', 'Bilim OS — демо-сценарий', c);
+  return c;
 }
 
 await buildKP();
-await buildScript();
-await buildCompare();
-await buildOnboarding();
-await buildCheatsheet();
-await buildDemoScript();
-console.log('Sales kit complete.');
+
+const PB = () => new Paragraph({ children: [new PageBreak()] });
+const guide = [
+  ...brandTitle('Гайд продажника · всё для встречи и демо'),
+  divider('Шпаргалка — источник правды'),
+  ...secCheatsheet(),
+  PB(),
+  divider('Демо-сценарий встречи'),
+  ...secDemo(),
+  PB(),
+  divider('Скрипт встречи и возражения'),
+  ...secScript(),
+  PB(),
+  divider('Сравнение с конкурентами'),
+  ...secCompare(),
+  PB(),
+  divider('Запуск и безопасность'),
+  ...secOnboarding(),
+];
+await build('../Bilim_OS_гайд_продажника.docx', 'Bilim OS — гайд продажника', guide);
+console.log('Docs complete: КП + гайд продажника.');
