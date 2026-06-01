@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/shared/lib/prisma';
 import { successResponse, errorResponse } from '@/shared/lib/api-response';
 import { withAuth } from '@/shared/lib/api-auth';
+import { emitEvent } from '@/shared/lib/agent/engine';
 
 /**
  * POST /api/v1/tests/[id]/submit  { answers: { [questionId]: string[] } }
@@ -52,6 +53,13 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     await prisma.testAttempt.deleteMany({ where: { testId: id, studentId: self.id } });
     const attempt = await prisma.testAttempt.create({
       data: { testId: id, studentId: self.id, score, maxScore, answers: { create: answerRows } },
+    });
+
+    // Агентский движок: тест провален (<50%) → ученику предложение разобрать тему
+    await emitEvent('test.completed', {
+      actorUserId: userId,
+      studentId: self.id,
+      payload: { score, maxScore, testTitle: test.title, studentUserId: userId },
     });
 
     return successResponse({ attemptId: attempt.id, score, maxScore });

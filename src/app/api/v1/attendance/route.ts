@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/shared/lib/prisma';
 import { successResponse, errorResponse } from '@/shared/lib/api-response';
 import { withAuth } from '@/shared/lib/api-auth';
+import { emitEvent } from '@/shared/lib/agent/engine';
 
 export async function GET(request: NextRequest) {
   try {
@@ -129,6 +130,14 @@ export async function POST(request: NextRequest) {
         status,
         reason: reason ?? null,
       },
+    });
+
+    // Агентский движок: событие «посещаемость отмечена» (серия пропусков → алерт куратору)
+    await emitEvent('attendance.marked', {
+      actorUserId: auth.session.user.id,
+      studentId,
+      classId: student.classId,
+      payload: { status, date },
     });
 
     return successResponse(record, 201);

@@ -46,6 +46,7 @@ const NON_TEACHING_AUTH: Role[] = ['super_admin', 'analyst', 'zavuch', 'secretar
 export const SIDEBAR_NAV: NavRoute[] = [
   { href: '/diary', label: 'Дневник', roles: ['student', 'parent'] },
   { href: '/today', label: 'Сегодня', roles: ['teacher', 'curator', 'super_admin', 'zavuch'] },
+  { href: '/agent', label: 'Панель агента', roles: ALL_AUTH },
   // Админская «Главная» — всешкольная статистика; учителю не показываем (у него «Сегодня»)
   { href: '/dashboard', label: 'Главная', roles: ['super_admin', 'analyst', 'zavuch', 'specialist', 'secretary'] },
   { href: '/classes', label: 'Классы', roles: ADMIN_SECRETARY },

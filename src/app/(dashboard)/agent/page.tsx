@@ -1,0 +1,119 @@
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActionIcon, Badge, Button, Card, Group, Loader, Stack, Switch, Text, Title,
+} from '@mantine/core';
+import {
+  IconRobot, IconAlertTriangle, IconChecklist, IconBulb, IconMail, IconCheck, IconX, IconPlayerPlay,
+} from '@tabler/icons-react';
+
+interface Item {
+  id: string; ruleKey: string | null; kind: string; severity: string;
+  title: string; body: string; status: string; studentId: string | null; createdAt: string;
+}
+
+const KIND_ICON: Record<string, React.ReactNode> = {
+  alert: <IconAlertTriangle size={18} />,
+  task: <IconChecklist size={18} />,
+  suggestion: <IconBulb size={18} />,
+  draft: <IconMail size={18} />,
+};
+const SEV_COLOR: Record<string, string> = { info: 'blue', warn: 'orange', urgent: 'red' };
+const KIND_LABEL: Record<string, string> = { alert: 'Алерт', task: 'Задача', suggestion: 'Совет', draft: 'Черновик' };
+
+function fmt(iso: string) {
+  try { return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+  catch { return iso; }
+}
+
+export default function AgentPanelPage() {
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const res = await fetch(`/api/v1/agent/items${showAll ? '?status=all' : ''}`);
+    const json = await res.json();
+    if (json.success) setItems(json.data.items);
+    setLoading(false);
+  }, [showAll]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const act = useCallback(async (id: string, status: string) => {
+    setBusy(id);
+    try {
+      await fetch(`/api/v1/agent/items/${id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      await load();
+    } finally {
+      setBusy(null);
+    }
+  }, [load]);
+
+  const isClosed = (s: string) => s === 'done' || s === 'dismissed';
+
+  return (
+    <Stack gap="lg" p="md">
+      <Group justify="space-between">
+        <Group gap="xs">
+          <IconRobot size={26} color="var(--mantine-color-blue-6)" />
+          <div>
+            <Title order={2}>Панель агента</Title>
+            <Text c="dimmed" size="sm">ИИ-ассистент следит за событиями и подсказывает, что сделать.</Text>
+          </div>
+        </Group>
+        <Switch label="Показать закрытые" checked={showAll} onChange={(e) => setShowAll(e.currentTarget.checked)} />
+      </Group>
+
+      {loading ? (
+        <Group justify="center" p="xl"><Loader /></Group>
+      ) : items.length === 0 ? (
+        <Card withBorder radius="md" padding="xl">
+          <Text c="dimmed" ta="center">Пока всё спокойно — агенту нечего предложить.</Text>
+        </Card>
+      ) : (
+        <Stack gap="xs">
+          {items.map((it) => {
+            const closed = isClosed(it.status);
+            return (
+              <Card key={it.id} withBorder radius="md" padding="sm" style={{ opacity: closed ? 0.6 : 1 }}>
+                <Group justify="space-between" wrap="nowrap" align="flex-start">
+                  <Group gap="sm" wrap="nowrap" align="flex-start" style={{ minWidth: 0 }}>
+                    <Badge color={SEV_COLOR[it.severity] ?? 'gray'} variant="light" leftSection={KIND_ICON[it.kind]}>
+                      {KIND_LABEL[it.kind] ?? it.kind}
+                    </Badge>
+                    <div style={{ minWidth: 0 }}>
+                      <Text fw={600}>{it.title}</Text>
+                      <Text size="sm" c="dimmed">{it.body}</Text>
+                      <Text size="xs" c="dimmed" mt={4}>{fmt(it.createdAt)}{it.status !== 'new' ? ` · ${it.status}` : ''}</Text>
+                    </div>
+                  </Group>
+                  {!closed && (
+                    <Group gap={4} wrap="nowrap">
+                      {it.status === 'new' && (
+                        <ActionIcon variant="subtle" color="blue" title="В работу" loading={busy === it.id} onClick={() => act(it.id, 'in_progress')}>
+                          <IconPlayerPlay size={18} />
+                        </ActionIcon>
+                      )}
+                      <ActionIcon variant="subtle" color="green" title="Готово" loading={busy === it.id} onClick={() => act(it.id, 'done')}>
+                        <IconCheck size={18} />
+                      </ActionIcon>
+                      <ActionIcon variant="subtle" color="gray" title="Скрыть" loading={busy === it.id} onClick={() => act(it.id, 'dismissed')}>
+                        <IconX size={18} />
+                      </ActionIcon>
+                    </Group>
+                  )}
+                </Group>
+              </Card>
+            );
+          })}
+        </Stack>
+      )}
+    </Stack>
+  );
+}

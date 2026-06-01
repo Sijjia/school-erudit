@@ -50,6 +50,7 @@ import {
   IconNotebook,
   IconPalette,
   IconPresentation,
+  IconRobot,
   IconSchool,
   IconShield,
   IconStar,
@@ -71,6 +72,7 @@ import {
 const SIDEBAR_ICONS: Record<string, React.ComponentType<{ size?: number; stroke?: number }>> = {
   '/diary': IconNotebook,
   '/today': IconCalendarEvent,
+  '/agent': IconRobot,
   '/dashboard': IconHome,
   '/calendar': IconCalendar,
   '/classes': IconSchool,

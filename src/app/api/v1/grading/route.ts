@@ -3,6 +3,7 @@ import { prisma } from '@/shared/lib/prisma';
 import { successResponse, errorResponse } from '@/shared/lib/api-response';
 import { withAuth } from '@/shared/lib/api-auth';
 import { checkRateLimit, getClientIp } from '@/shared/lib/rate-limit';
+import { emitEvent } from '@/shared/lib/agent/engine';
 
 export async function GET(request: NextRequest) {
   try {
@@ -181,6 +182,14 @@ export async function POST(request: NextRequest) {
         newValue: value,
         action: 'created',
       },
+    });
+
+    // Агентский движок: событие «оценка выставлена» (низкая → алерт родителю + задача учителю)
+    await emitEvent('grade.created', {
+      actorUserId: auth.session.user.id,
+      studentId,
+      classId: student.classId,
+      payload: { value, scale: gradeScale, subjectId, categoryId },
     });
 
     return successResponse(grade, 201);

@@ -1218,3 +1218,64 @@ model LessonPlan {
 
   @@index([teacherId])
 }
+
+// ============ AGENT (проактивная мультиагентная система) ============
+
+/// Лог доменных событий — шина для агентского движка. См. docs/ai-agents-blueprint.md.
+model AgentEvent {
+  id          String    @id @default(cuid())
+  type        String    // grade.created | attendance.marked | test.completed | ...
+  actorUserId String?
+  studentId   String?
+  classId     String?
+  payload     Json
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+
+  @@index([type, processedAt])
+}
+
+/// Правило: на какое событие реагировать и что делать. Для вкл/выкл сценариев.
+model AgentRule {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  title     String
+  eventType String
+  config    Json?
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Элемент Панели агента (инбокс роли/пользователя).
+model AgentItem {
+  id         String    @id @default(cuid())
+  ruleKey    String?
+  eventId    String?
+  forUserId  String?
+  forRole    String?
+  studentId  String?
+  kind       String    // alert | task | suggestion | draft
+  severity   String    @default("info") // info | warn | urgent
+  title      String
+  body       String    @db.VarChar(2000)
+  payload    Json?
+  status     String    @default("new") // new | in_progress | approved | done | dismissed
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+  resolvedBy String?
+
+  @@index([forUserId, status])
+  @@index([forRole, status])
+  @@index([studentId])
+}
+
+/// Аудит действий агента и реакций человека.
+model AgentActionLog {
+  id        String   @id @default(cuid())
+  itemId    String?
+  action    String   // created | approved | sent | dismissed | escalated
+  byUserId  String?
+  detail    Json?
+  createdAt DateTime @default(now())
+}
