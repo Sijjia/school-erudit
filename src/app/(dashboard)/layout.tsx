@@ -137,6 +137,24 @@ const ROLE_LABEL: Record<string, string> = {
   specialist: 'Специалист',
   student: 'Ученик',
   parent: 'Родитель',
+  accountant: 'Бухгалтер',
+  psychologist: 'Психолог',
+  doctor: 'Врач',
+  hr: 'Кадровик',
+  librarian: 'Библиотекарь',
+  cook: 'Повар',
+  zavhoz: 'Завхоз',
+};
+
+/** Домашняя страница узких ролей — их собственный кабинет. */
+const ROLE_HOME: Record<string, string> = {
+  accountant: '/workspace/accounting',
+  psychologist: '/workspace/psychologist',
+  doctor: '/workspace/medical',
+  hr: '/staff',
+  librarian: '/library',
+  cook: '/workspace/kitchen',
+  zavhoz: '/workspace/maintenance',
 };
 
 const WEEKDAY_LABEL = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
@@ -180,10 +198,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => { active = false; clearInterval(t); };
   }, [pathname]);
 
-  // Student/parent → redirect to diary instead of dashboard
+  // Student/parent → дневник; узкие роли → их кабинет (вместо общего дашборда)
   useEffect(() => {
     if ((role === 'student' || role === 'parent') && pathname === '/dashboard') {
       router.replace('/diary');
+    } else if (role && ROLE_HOME[role] && pathname === '/dashboard') {
+      router.replace(ROLE_HOME[role]);
     }
   }, [role, pathname, router]);
 

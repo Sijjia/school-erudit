@@ -15,7 +15,7 @@ const OWNER_TYPES = [
 
 export default function DocumentsPage() {
   return (
-    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary']}>
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary', 'hr']}>
       <ResourcePage
         title="Документы"
         icon={<IconFileText size={22} color="#495057" />}

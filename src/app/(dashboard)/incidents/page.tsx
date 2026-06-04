@@ -444,7 +444,7 @@ function IncidentsContent() {
 
 export default function IncidentsPage() {
   return (
-    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary', 'teacher', 'curator', 'specialist']}>
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary', 'teacher', 'curator', 'specialist', 'psychologist']}>
       <IncidentsContent />
     </RoleGate>
   );

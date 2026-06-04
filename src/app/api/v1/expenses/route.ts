@@ -2,7 +2,7 @@ import { createCrud } from '@/shared/lib/crud';
 
 export const { GET, POST, DELETE } = createCrud({
   model: 'expense',
-  writeRoles: ['super_admin', 'analyst', 'zavuch'],
+  writeRoles: ['super_admin', 'analyst', 'zavuch', 'accountant'],
   createFields: ['category', 'title', 'amount', 'date'],
   dateFields: ['date'],
   intFields: ['amount'],

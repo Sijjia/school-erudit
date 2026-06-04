@@ -24,7 +24,7 @@ const EXP_CATS = [
 
 export default function AccountingPage() {
   return (
-    <RoleGate roles={['super_admin', 'analyst', 'zavuch']}>
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'accountant']}>
       <Tabs defaultValue="invoices">
         <Tabs.List mb="md">
           <Tabs.Tab value="invoices" leftSection={<IconReceipt size={16} />}>Счета (оплата обучения)</Tabs.Tab>

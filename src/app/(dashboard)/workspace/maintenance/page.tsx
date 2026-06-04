@@ -21,7 +21,7 @@ const ST_COLOR: Record<string, string> = { open: 'blue', in_progress: 'orange', 
 
 export default function MaintenancePage() {
   return (
-    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary']}>
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary', 'zavhoz']}>
       <Tabs defaultValue="requests">
         <Tabs.List mb="md">
           <Tabs.Tab value="requests" leftSection={<IconClipboardList size={16} />}>Заявки</Tabs.Tab>

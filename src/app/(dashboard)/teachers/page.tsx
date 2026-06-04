@@ -748,7 +748,7 @@ function TeachersContent() {
 
 export default function TeachersPage() {
   return (
-    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary']}>
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary', 'hr']}>
       <TeachersContent />
     </RoleGate>
   );

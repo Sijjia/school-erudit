@@ -448,7 +448,7 @@ function UrgentIssuesContent() {
 
 export default function UrgentIssuesPage() {
   return (
-    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'teacher', 'curator', 'specialist']}>
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'teacher', 'curator', 'specialist', 'psychologist']}>
       <UrgentIssuesContent />
     </RoleGate>
   );

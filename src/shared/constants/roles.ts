@@ -17,6 +17,13 @@ export const ALL_ROLES: AppRole[] = [
   'specialist',
   'student',
   'parent',
+  'accountant',
+  'psychologist',
+  'doctor',
+  'hr',
+  'librarian',
+  'cook',
+  'zavhoz',
 ]
 
 export const ROLE_LABELS: Record<AppRole, string> = {
@@ -29,6 +36,13 @@ export const ROLE_LABELS: Record<AppRole, string> = {
   specialist: 'Специалист',
   student: 'Ученик',
   parent: 'Родитель',
+  accountant: 'Бухгалтер',
+  psychologist: 'Психолог',
+  doctor: 'Врач',
+  hr: 'Кадровик',
+  librarian: 'Библиотекарь',
+  cook: 'Повар',
+  zavhoz: 'Завхоз',
 }
 
 export const ADMIN_ROLES: AppRole[] = ['super_admin', 'analyst']

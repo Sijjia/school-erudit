@@ -14,7 +14,7 @@ const CATS = [
 
 export default function LibraryPage() {
   return (
-    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'teacher', 'curator', 'secretary']}>
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'teacher', 'curator', 'secretary', 'librarian']}>
       <ResourcePage
         title="Библиотека"
         icon={<IconBook2 size={22} color="#1098ad" />}

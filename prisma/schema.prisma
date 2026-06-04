@@ -36,9 +36,17 @@ enum Role {
   secretary
   teacher
   curator
-  specialist
+  specialist // широкий специалист (логопед/универсал — все три кабинета)
   student
   parent
+  // Узкие роли сотрудников (этап 4: «заходишь как бухгалтер — другие функции»)
+  accountant // бухгалтер
+  psychologist // психолог (kind=psych)
+  doctor // врач (kind=medical)
+  hr // кадровик
+  librarian // библиотекарь
+  cook // повар/столовая
+  zavhoz // завхоз/АХЧ
 }
 
 // ============ SCHOOL STRUCTURE ============

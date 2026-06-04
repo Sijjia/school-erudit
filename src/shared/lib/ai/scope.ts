@@ -27,6 +27,8 @@ export interface AssistantScope {
   allowedStudentIds: string[] | 'all';
   canSeeFinance: boolean;
   canSeePsych: boolean;
+  /** какие виды спец-данных доступны: психолог — только psych, врач — только medical */
+  allowedSpecialistKinds: Array<'speech' | 'psych' | 'medical'> | 'all';
   canSeeSchoolStats: boolean;
 }
 
@@ -40,6 +42,13 @@ export const ROLE_LABELS: Record<Role, string> = {
   specialist: 'Специалист (психолог/логопед/врач)',
   student: 'Ученик',
   parent: 'Родитель',
+  accountant: 'Бухгалтер',
+  psychologist: 'Психолог',
+  doctor: 'Врач',
+  hr: 'Кадровик (HR)',
+  librarian: 'Библиотекарь',
+  cook: 'Повар (столовая)',
+  zavhoz: 'Завхоз (АХЧ)',
 };
 
 interface SessionUser {
@@ -61,16 +70,35 @@ export async function resolveScope(user: SessionUser): Promise<AssistantScope> {
   switch (role) {
     case 'super_admin':
     case 'analyst':
-      return { ...base, allowedClassIds: 'all', allowedStudentIds: 'all', canSeeFinance: true, canSeePsych: true, canSeeSchoolStats: true };
+      return { ...base, allowedClassIds: 'all', allowedStudentIds: 'all', canSeeFinance: true, canSeePsych: true, allowedSpecialistKinds: 'all', canSeeSchoolStats: true };
 
     case 'zavuch':
-      return { ...base, allowedClassIds: 'all', allowedStudentIds: 'all', canSeeFinance: true, canSeePsych: true, canSeeSchoolStats: true };
+      return { ...base, allowedClassIds: 'all', allowedStudentIds: 'all', canSeeFinance: true, canSeePsych: true, allowedSpecialistKinds: 'all', canSeeSchoolStats: true };
 
     case 'secretary':
-      return { ...base, allowedClassIds: 'all', allowedStudentIds: 'all', canSeeFinance: false, canSeePsych: false, canSeeSchoolStats: true };
+      return { ...base, allowedClassIds: 'all', allowedStudentIds: 'all', canSeeFinance: false, canSeePsych: false, allowedSpecialistKinds: [], canSeeSchoolStats: true };
 
     case 'specialist':
-      return { ...base, allowedClassIds: 'all', allowedStudentIds: 'all', canSeeFinance: false, canSeePsych: true, canSeeSchoolStats: true };
+      return { ...base, allowedClassIds: 'all', allowedStudentIds: 'all', canSeeFinance: false, canSeePsych: true, allowedSpecialistKinds: 'all', canSeeSchoolStats: true };
+
+    // ── Узкие роли сотрудников: каждый видит свой домен ──
+    case 'accountant':
+      return { ...base, allowedClassIds: 'all', allowedStudentIds: 'all', canSeeFinance: true, canSeePsych: false, allowedSpecialistKinds: [], canSeeSchoolStats: true };
+
+    case 'psychologist':
+      return { ...base, allowedClassIds: 'all', allowedStudentIds: 'all', canSeeFinance: false, canSeePsych: true, allowedSpecialistKinds: ['psych'], canSeeSchoolStats: true };
+
+    case 'doctor':
+      return { ...base, allowedClassIds: 'all', allowedStudentIds: 'all', canSeeFinance: false, canSeePsych: true, allowedSpecialistKinds: ['medical'], canSeeSchoolStats: true };
+
+    case 'hr':
+      return { ...base, allowedClassIds: 'all', allowedStudentIds: 'all', canSeeFinance: false, canSeePsych: false, allowedSpecialistKinds: [], canSeeSchoolStats: true };
+
+    case 'librarian':
+    case 'cook':
+    case 'zavhoz':
+      // хозблок: профили учеников не нужны — ассистент отвечает по базе знаний и своим модулям
+      return { ...base, allowedClassIds: [], allowedStudentIds: [], canSeeFinance: false, canSeePsych: false, allowedSpecialistKinds: [], canSeeSchoolStats: false };
 
     case 'teacher':
     case 'curator': {
@@ -96,6 +124,7 @@ export async function resolveScope(user: SessionUser): Promise<AssistantScope> {
         allowedStudentIds: students.map((s) => s.id),
         canSeeFinance: false,
         canSeePsych: false,
+        allowedSpecialistKinds: [],
         canSeeSchoolStats: false,
       };
     }
@@ -112,6 +141,7 @@ export async function resolveScope(user: SessionUser): Promise<AssistantScope> {
         allowedStudentIds: student ? [student.id] : [],
         canSeeFinance: true, // только свои инвойсы (scope режет по студенту)
         canSeePsych: false,
+        allowedSpecialistKinds: [],
         canSeeSchoolStats: false,
       };
     }
@@ -134,12 +164,13 @@ export async function resolveScope(user: SessionUser): Promise<AssistantScope> {
         allowedStudentIds: studentIds,
         canSeeFinance: true, // только инвойсы своих детей
         canSeePsych: false,
+        allowedSpecialistKinds: [],
         canSeeSchoolStats: false,
       };
     }
 
     default:
-      return { ...base, allowedClassIds: [], allowedStudentIds: [], canSeeFinance: false, canSeePsych: false, canSeeSchoolStats: false };
+      return { ...base, allowedClassIds: [], allowedStudentIds: [], canSeeFinance: false, canSeePsych: false, allowedSpecialistKinds: [], canSeeSchoolStats: false };
   }
 }
 

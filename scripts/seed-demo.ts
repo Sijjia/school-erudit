@@ -12,6 +12,14 @@ async function main() {
     { login: 'secretary1', role: 'secretary', email: 'secretary@erudit.kg' },
     { login: 'curator1', role: 'curator', email: 'curator@erudit.kg' },
     { login: 'specialist1', role: 'specialist', email: 'specialist@erudit.kg' },
+    // Узкие роли сотрудников («заходишь как бухгалтер — другие функции»)
+    { login: 'accountant1', role: 'accountant', email: 'accountant@erudit.kg' },
+    { login: 'psychologist1', role: 'psychologist', email: 'psychologist@erudit.kg' },
+    { login: 'doctor1', role: 'doctor', email: 'doctor@erudit.kg' },
+    { login: 'hr1', role: 'hr', email: 'hr@erudit.kg' },
+    { login: 'librarian1', role: 'librarian', email: 'librarian@erudit.kg' },
+    { login: 'cook1', role: 'cook', email: 'cook@erudit.kg' },
+    { login: 'zavhoz1', role: 'zavhoz', email: 'zavhoz@erudit.kg' },
   ]
   const pwHash = await hash('erudit2025', 10)
   for (const u of missingRoles) {

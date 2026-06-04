@@ -21,7 +21,7 @@ async function resolveStudent(role: string, userId: string, bodyStudentId?: stri
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await withAuth(request, { roles: ['student', 'parent', 'super_admin', 'analyst', 'zavuch', 'secretary'] });
+    const auth = await withAuth(request, { roles: ['student', 'parent', 'super_admin', 'analyst', 'zavuch', 'secretary', 'cook'] });
     if (auth.response) return auth.response;
     const role = auth.session.user.role;
     const userId = auth.session.user.id;

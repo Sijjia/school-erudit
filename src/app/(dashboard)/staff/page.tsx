@@ -116,7 +116,7 @@ function StaffContent() {
 
 export default function StaffPage() {
   return (
-    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary']}>
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary', 'hr']}>
       <StaffContent />
     </RoleGate>
   );

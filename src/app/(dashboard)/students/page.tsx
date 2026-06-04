@@ -532,7 +532,7 @@ function StudentsContent() {
 
 export default function StudentsPage() {
   return (
-    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary', 'teacher', 'curator', 'specialist']}>
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary', 'teacher', 'curator', 'specialist', 'psychologist', 'doctor']}>
       <StudentsContent />
     </RoleGate>
   );

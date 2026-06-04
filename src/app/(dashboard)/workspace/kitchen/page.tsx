@@ -15,7 +15,7 @@ const MEAL_COLOR: Record<string, string> = { breakfast: 'yellow', lunch: 'green'
 
 export default function KitchenPage() {
   return (
-    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary']}>
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary', 'cook']}>
       <ResourcePage
         title="Кухня — меню питания"
         icon={<IconToolsKitchen2 size={22} color="#fd7e14" />}

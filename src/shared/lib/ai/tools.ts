@@ -214,21 +214,25 @@ const studentPsych: ToolExecutor = async (args, scope) => {
   const studentId = String(args.studentId ?? '');
   if (!scope.canSeePsych || !studentInScope(scope, studentId)) return ACCESS_DENIED;
 
+  // психолог видит только psych, врач — только medical, specialist/админ — всё
+  const kindFilter =
+    scope.allowedSpecialistKinds === 'all' ? {} : { kind: { in: scope.allowedSpecialistKinds } };
+
   const [sessions, recommendations, progress] = await Promise.all([
     prisma.specialistSession.findMany({
-      where: { studentId },
+      where: { studentId, ...kindFilter },
       select: { kind: true, date: true, note: true },
       orderBy: { date: 'desc' },
       take: 8,
     }),
     prisma.specialistRecommendation.findMany({
-      where: { studentId },
+      where: { studentId, ...kindFilter },
       select: { kind: true, text: true, date: true },
       orderBy: { date: 'desc' },
       take: 5,
     }),
     prisma.specialistProgress.findMany({
-      where: { studentId },
+      where: { studentId, ...kindFilter },
       select: { kind: true, metric: true, value: true, date: true },
       orderBy: { date: 'desc' },
       take: 10,

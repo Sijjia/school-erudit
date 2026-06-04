@@ -121,5 +121,5 @@ function Meals() {
 }
 
 export default function MealsPage() {
-  return <RoleGate roles={['student', 'parent', 'super_admin', 'analyst', 'zavuch', 'secretary']}><Meals /></RoleGate>;
+  return <RoleGate roles={['student', 'parent', 'super_admin', 'analyst', 'zavuch', 'secretary', 'cook']}><Meals /></RoleGate>;
 }
