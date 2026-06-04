@@ -32,6 +32,19 @@ const ROLE_TABS = [
   { id: 'parent', label: 'Родитель', login: 'parent1' },
 ];
 
+// Сотрудники: у каждого свой кабинет (демо «9 доменов — 1 ядро»)
+const STAFF_TABS = [
+  { id: 'accountant', label: 'Бухгалтер', login: 'accountant1' },
+  { id: 'psychologist', label: 'Психолог', login: 'psychologist1' },
+  { id: 'doctor', label: 'Врач', login: 'doctor1' },
+  { id: 'hr', label: 'HR', login: 'hr1' },
+  { id: 'librarian', label: 'Библиотека', login: 'librarian1' },
+  { id: 'cook', label: 'Столовая', login: 'cook1' },
+  { id: 'zavhoz', label: 'АХЧ', login: 'zavhoz1' },
+];
+
+const ALL_TABS = [...ROLE_TABS, ...STAFF_TABS];
+
 const FEATURES = [
   { icon: IconSparkles, title: 'Автоматическая аналитика', desc: 'Тренды успеваемости и группы риска', ml: 0 },
   { icon: IconMessageCircle, title: 'Прямая связь с родителями', desc: 'Уведомления в Telegram и WhatsApp', ml: 32 },
@@ -103,7 +116,7 @@ export default function LoginPage() {
 
   function selectRole(id: string) {
     setActiveRole(id);
-    const tab = ROLE_TABS.find((t) => t.id === id);
+    const tab = ALL_TABS.find((t) => t.id === id);
     if (tab) {
       form.setFieldValue('login', tab.login);
       form.setFieldValue('password', DEMO_PASSWORD);
@@ -149,6 +162,29 @@ export default function LoginPage() {
                   padding: '8px 16px',
                   borderRadius: 7,
                   fontWeight: 600,
+                  background: activeRole === t.id ? 'white' : 'transparent',
+                  color: activeRole === t.id ? '#0f172a' : '#6b7280',
+                  boxShadow: activeRole === t.id ? '0 1px 3px rgba(15,23,42,0.06)' : 'none',
+                }}
+              >
+                {t.label}
+              </Button>
+            ))}
+          </Group>
+
+          {/* Staff tabs: у каждого сотрудника свой кабинет */}
+          <Group gap={4} mt={8} p={4} style={{ background: '#f3f5f8', borderRadius: 10, width: 'fit-content', maxWidth: 460 }}>
+            {STAFF_TABS.map((t) => (
+              <Button
+                key={t.id}
+                variant="subtle"
+                size="compact-xs"
+                onClick={() => selectRole(t.id)}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: 6,
+                  fontWeight: 600,
+                  fontSize: 12,
                   background: activeRole === t.id ? 'white' : 'transparent',
                   color: activeRole === t.id ? '#0f172a' : '#6b7280',
                   boxShadow: activeRole === t.id ? '0 1px 3px rgba(15,23,42,0.06)' : 'none',
