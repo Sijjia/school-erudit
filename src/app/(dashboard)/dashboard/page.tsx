@@ -67,6 +67,17 @@ interface Incident {
   createdAt: string;
 }
 
+/* «Ваш экран»: домены экосистемы одной выдачей (/api/v1/dashboard/domains) */
+interface DomainsData {
+  finance: { invoiced: number; paid: number; debt: number; debtStudents: number } | null;
+  psych: { sessions30: number; studentsInWork: number; recommendations30: number };
+  hr: { teachers: number; weeklyHours: number; staff: number };
+  admission: { total: number; inPipeline: number; enrolled: number; conversion: number };
+  retention: { rejectedTotal: number; reasons: Array<{ name: string; reason: string }> };
+  quality: { avgGrade: number | null; attendanceRate: number | null };
+  ai: { active: number; latest: Array<{ title: string; severity: string }> };
+}
+
 /* ── Helpers ── */
 function KpiCard({ icon: Icon, label, value, delta, deltaDir, sub }: {
   icon: React.ComponentType<{ size?: number }>;
@@ -114,6 +125,49 @@ function timeAgo(dateStr: string): string {
 const SEVERITY_COLOR: Record<string, string> = { high: 'red', medium: 'yellow', low: 'green' };
 const PRIORITY_COLOR: Record<string, string> = { high: 'red', medium: 'yellow', low: 'blue' };
 
+/* Карточка домена экосистемы («Ваш экран», слайд презентации) */
+function DomainCard({ title, color, href, lines }: {
+  title: string;
+  color: string;
+  href: string;
+  lines: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <Paper
+      component="a"
+      href={href}
+      p="md"
+      radius="lg"
+      withBorder
+      style={{
+        border: '1px solid #e6e9ee',
+        borderTop: `3px solid var(--mantine-color-${color}-5)`,
+        textDecoration: 'none',
+        color: 'inherit',
+        display: 'block',
+        transition: 'transform 120ms ease, box-shadow 120ms ease',
+      }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 18px rgba(15,23,42,0.08)'; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}
+    >
+      <Group justify="space-between" mb={8}>
+        <Text fw={700} size="sm" c={`${color}.7`}>{title}</Text>
+        <IconChevronRight size={14} color="var(--mantine-color-dimmed)" />
+      </Group>
+      <Stack gap={3}>
+        {lines.map((l) => (
+          <Group key={l.label} justify="space-between" gap={8} wrap="nowrap">
+            <Text size="xs" c="dimmed" lineClamp={1}>{l.label}</Text>
+            <Text size="xs" fw={600} style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{l.value}</Text>
+          </Group>
+        ))}
+      </Stack>
+    </Paper>
+  );
+}
+
+const som = (n: number) => `${n.toLocaleString('ru-RU')} сом`;
+
 function DashboardContent() {
   const { me } = useMe();
 
@@ -130,6 +184,15 @@ function DashboardContent() {
     queryKey: ['dashboard-analytics'],
     queryFn: async () => {
       const res = await fetch('/api/v1/dashboard/analytics');
+      if (!res.ok) throw new Error('Failed');
+      return res.json();
+    },
+  });
+
+  const { data: domainsData } = useQuery<{ success: boolean; data: DomainsData }>({
+    queryKey: ['dashboard-domains'],
+    queryFn: async () => {
+      const res = await fetch('/api/v1/dashboard/domains');
       if (!res.ok) throw new Error('Failed');
       return res.json();
     },
@@ -226,6 +289,101 @@ function DashboardContent() {
           value={String(stats?.totalTeachers ?? 0)}
         />
       </SimpleGrid>
+
+      {/* ── Экосистема школы: домены из единого ядра («Ваш экран») ── */}
+      {domainsData?.data && (() => {
+        const d = domainsData.data;
+        return (
+          <div>
+            <Group justify="space-between" mb={8}>
+              <div>
+                <Text fw={600} size="md">Экосистема школы</Text>
+                <Text size="xs" c="dimmed">Все домены из одного ядра · обновляется в реальном времени</Text>
+              </div>
+            </Group>
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
+              {d.finance && (
+                <DomainCard
+                  title="Финансы"
+                  color="orange"
+                  href="/workspace/accounting"
+                  lines={[
+                    { label: 'Начислено', value: som(d.finance.invoiced) },
+                    { label: 'Оплачено', value: som(d.finance.paid) },
+                    { label: 'Задолженность', value: `${som(d.finance.debt)} · ${d.finance.debtStudents} уч.` },
+                  ]}
+                />
+              )}
+              <DomainCard
+                title="Психологи"
+                color="violet"
+                href="/workspace/psychologist"
+                lines={[
+                  { label: 'Сессий за 30 дней', value: String(d.psych.sessions30) },
+                  { label: 'Учеников в работе', value: String(d.psych.studentsInWork) },
+                  { label: 'Рекомендаций', value: String(d.psych.recommendations30) },
+                ]}
+              />
+              <DomainCard
+                title="Приёмная"
+                color="teal"
+                href="/admission"
+                lines={[
+                  { label: 'Заявок всего', value: String(d.admission.total) },
+                  { label: 'В воронке', value: String(d.admission.inPipeline) },
+                  { label: 'Конверсия', value: `${d.admission.conversion}%` },
+                ]}
+              />
+              <DomainCard
+                title="HR"
+                color="green"
+                href="/staff"
+                lines={[
+                  { label: 'Педагогов', value: String(d.hr.teachers) },
+                  { label: 'Нагрузка, ч/нед', value: String(d.hr.weeklyHours) },
+                  { label: 'Прочий персонал', value: String(d.hr.staff) },
+                ]}
+              />
+              <DomainCard
+                title="Retention"
+                color="red"
+                href="/admission"
+                lines={[
+                  { label: 'Отказов', value: String(d.retention.rejectedTotal) },
+                  ...(d.retention.reasons.slice(0, 2).map((r) => ({ label: r.name, value: r.reason.slice(0, 28) }))),
+                ]}
+              />
+              <DomainCard
+                title="Качество"
+                color="blue"
+                href="/analytics"
+                lines={[
+                  { label: 'Средний балл', value: d.quality.avgGrade != null ? String(d.quality.avgGrade) : '—' },
+                  { label: 'Посещаемость 30 дн', value: d.quality.attendanceRate != null ? `${d.quality.attendanceRate}%` : '—' },
+                ]}
+              />
+              <DomainCard
+                title="AI-инсайты"
+                color="grape"
+                href="/agent"
+                lines={[
+                  { label: 'Активных сигналов', value: String(d.ai.active) },
+                  ...(d.ai.latest.slice(0, 2).map((i) => ({ label: i.severity === 'warn' || i.severity === 'urgent' ? '⚠️ сигнал' : 'сигнал', value: i.title.slice(0, 28) }))),
+                ]}
+              />
+              <DomainCard
+                title="Граф ядра"
+                color="indigo"
+                href="/core"
+                lines={[
+                  { label: 'Визуализация', value: 'нейросвязи' },
+                  { label: 'Все модули', value: 'одно ядро' },
+                ]}
+              />
+            </SimpleGrid>
+          </div>
+        );
+      })()}
 
       {/* ── Main grid ── */}
       <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="md">

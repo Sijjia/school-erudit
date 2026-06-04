@@ -1,5 +1,5 @@
 import { type AssistantScope } from '@/shared/lib/ai/scope';
-import { executeTool } from '@/shared/lib/ai/tools';
+import { executeTool, knowledgeQueryWords } from '@/shared/lib/ai/tools';
 
 /**
  * Демо-режим ассистента без LLM-ключа: разбираем вопрос по ключевым словам
@@ -58,11 +58,25 @@ export async function stubAssistant(scope: AssistantScope, userMessage: string):
   const myStudentId = Array.isArray(scope.allowedStudentIds) ? scope.allowedStudentIds[0] : null;
   const has = (...words: string[]) => words.some((w) => q.includes(w));
 
+  // выдержка из базы знаний (или null) — общий фолбэк для «как устроено в школе»
+  const tryKnowledge = async (): Promise<string | null> => {
+    if (!knowledgeQueryWords(userMessage).length) return null;
+    const r = (await run('school_knowledge', { query: userMessage })) as unknown;
+    if (Array.isArray(r) && r.length) {
+      return `Из базы знаний школы:\n\n${r.map((d) => `📄 ${d['документ']}\n${d['выдержка']}`).join('\n\n')}`;
+    }
+    return null;
+  };
+
   try {
     // ── Воронка приёмной ──
     if (has('ворон', 'приём', 'прием', 'заявк', 'зачислен')) {
       const r = await run('admission_funnel');
-      if (denied(r)) return reply('У вашей роли нет доступа к данным приёмной.');
+      if (denied(r)) {
+        // у родителя/ученика нет воронки — но «как проходит приём» есть в базе знаний
+        const kb = await tryKnowledge();
+        return reply(kb ?? 'У вашей роли нет доступа к данным приёмной.');
+      }
       if ('info' in r) return reply(String(r.info));
       const stages = Object.entries((r['по_этапам'] as Record<string, number>) ?? {})
         .map(([k, v]) => `• ${STAGE_LABEL[k] ?? k}: ${v}`)
@@ -195,6 +209,10 @@ export async function stubAssistant(scope: AssistantScope, userMessage: string):
         `Здравствуйте, ${scope.displayName}! Я ассистент ядра Bilim OS — отвечаю по реальным данным школы в рамках вашей роли (${scope.roleLabel.toLowerCase()}).\n\nПопробуйте спросить:\n${suggestions(scope)}`,
       );
     }
+
+    // ── База знаний школы: «как устроено» (режим, приём, оплата, контакты) ──
+    const kb = await tryKnowledge();
+    if (kb) return reply(kb);
 
     // ── Не разобрали вопрос ──
     return reply(`Пока я отвечаю на типовые вопросы по данным школы. Попробуйте:\n${suggestions(scope)}`);

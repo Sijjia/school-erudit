@@ -80,6 +80,7 @@ const SIDEBAR_ICONS: Record<string, React.ComponentType<{ size?: number; stroke?
   '/dashboard': IconHome,
   '/core': IconChartDots,
   '/admission': IconUsersGroup,
+  '/knowledge': IconBooks,
   '/calendar': IconCalendar,
   '/classes': IconSchool,
   '/academic-periods': IconCalendarEvent,

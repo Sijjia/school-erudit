@@ -403,6 +403,57 @@ const admissionFunnel: ToolExecutor = async (_args, scope) => {
   };
 };
 
+// ─── 12. База знаний школы ───────────────────────────────────────────────────
+
+/** Слова запроса для поиска (выкидываем служебные/короткие). */
+export function knowledgeQueryWords(query: string): string[] {
+  return query
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length >= 4)
+    .slice(0, 6);
+}
+
+const schoolKnowledge: ToolExecutor = async (args, _scope) => {
+  const query = String(args.query ?? '').trim();
+  const words = knowledgeQueryWords(query);
+  if (!words.length) return { info: 'уточните вопрос' };
+
+  const docs = await prisma.knowledgeDoc.findMany({
+    where: {
+      OR: words.flatMap((w) => [
+        { content: { contains: w, mode: 'insensitive' as const } },
+        { title: { contains: w, mode: 'insensitive' as const } },
+      ]),
+    },
+    select: { title: true, category: true, content: true },
+    take: 6,
+  });
+  if (!docs.length) return { info: 'в базе знаний школы ничего не нашлось по этому вопросу' };
+
+  // ранжируем по числу совпавших слов, берём топ-2 с выдержками
+  const ranked = docs
+    .map((d) => {
+      const text = d.content.toLowerCase();
+      const hits = words.filter((w) => text.includes(w) || d.title.toLowerCase().includes(w));
+      const firstIdx = hits.length ? text.indexOf(hits[0]) : -1;
+      return { doc: d, score: hits.length, firstIdx };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 2);
+
+  return ranked.map(({ doc, firstIdx }) => {
+    const start = Math.max(0, firstIdx - 120);
+    const excerpt = doc.content.slice(start, start + 600).trim();
+    return {
+      документ: doc.title,
+      категория: doc.category,
+      выдержка: `${start > 0 ? '…' : ''}${excerpt}${start + 600 < doc.content.length ? '…' : ''}`,
+    };
+  });
+};
+
 // ─── Реестр ──────────────────────────────────────────────────────────────────
 
 interface ToolEntry {
@@ -556,6 +607,22 @@ const TOOLS: Record<string, ToolEntry> = {
         name: 'agent_inbox',
         description: 'Активные сигналы проактивных агентов для текущего пользователя: алерты, задачи, черновики (низкие оценки, пропуски и т.п.).',
         parameters: { type: 'object', properties: {} },
+      },
+    },
+  },
+  school_knowledge: {
+    available: () => true,
+    execute: schoolKnowledge,
+    def: {
+      type: 'function',
+      function: {
+        name: 'school_knowledge',
+        description: 'Поиск по базе знаний школы: режим работы, расписание звонков, правила приёма, оплата, контакты, внутренние инструкции. Используй для вопросов «как устроено в школе».',
+        parameters: {
+          type: 'object',
+          properties: { query: { type: 'string', description: 'Вопрос или ключевые слова' } },
+          required: ['query'],
+        },
       },
     },
   },

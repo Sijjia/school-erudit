@@ -1311,6 +1311,22 @@ model AssistantMessage {
   @@index([conversationId, createdAt])
 }
 
+// ============ БАЗА ЗНАНИЙ ШКОЛЫ ============
+
+/// Документы-инструкции школы (режим работы, правила приёма, оплата...).
+/// Ассистент ядра ищет по ним и отвечает «за менеджера» в рамках любой роли.
+model KnowledgeDoc {
+  id        String   @id @default(cuid())
+  title     String
+  category  String? // приём | оплата | режим | общее
+  content   String   @db.Text
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+}
+
 // ============ ПРИЁМНАЯ (CRM-воронка: звонок → зачисление) ============
 
 enum AdmissionStage {

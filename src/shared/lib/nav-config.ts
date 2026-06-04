@@ -50,9 +50,10 @@ export const SIDEBAR_NAV: NavRoute[] = [
   { href: '/journal', label: 'Журнал', roles: STAFF_TIER },
   // Админская «Главная» — всешкольная статистика; учителю не показываем (у него «Сегодня»)
   { href: '/dashboard', label: 'Главная', roles: ['super_admin', 'analyst', 'zavuch', 'specialist', 'secretary'] },
-  // Ядро экосистемы: граф связей + CRM-воронка приёмной
+  // Ядро экосистемы: граф связей + CRM-воронка приёмной + база знаний
   { href: '/core', label: 'Граф ядра', roles: ADMIN_SECRETARY },
   { href: '/admission', label: 'Приёмная (CRM)', roles: ADMIN_SECRETARY },
+  { href: '/knowledge', label: 'База знаний', roles: ADMIN_SECRETARY },
   { href: '/classes', label: 'Классы', roles: ADMIN_SECRETARY },
   { href: '/academic-periods', label: 'Учебные периоды', roles: ADMIN_AND_VICE },
   { href: '/substitutions', label: 'Замены', roles: STAFF_TIER },

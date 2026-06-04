@@ -4,9 +4,11 @@ import { successResponse, errorResponse } from '@/shared/lib/api-response';
 import { withAuth } from '@/shared/lib/api-auth';
 
 /**
- * GET /api/v1/core/graph — граф ядра школы для визуализации.
- * Центр «Школа» → домены (с реальными счётчиками) → классы → учителя → ученики (сэмпл).
- * Кап ~350 узлов, чтобы граф оставался живым и быстрым.
+ * GET /api/v1/core/graph — граф ядра школы для нейро-визуализации.
+ * Центр «Школа» → домены (с реальными счётчиками) → классы → учителя →
+ * ученики (сэмпл) → их родители. Кап ~400 узлов.
+ * Плюс `scenario` — шаги демо-анимации «оценка 2 → сигнал родителю»
+ * с реальными id узлов этого графа.
  */
 
 interface GraphNode {
@@ -23,8 +25,15 @@ interface GraphLink {
   target: string;
 }
 
+interface ScenarioStep {
+  from: string;
+  to: string;
+  caption: string;
+}
+
 const STUDENTS_PER_CLASS = 6;
 const MAX_TEACHERS = 30;
+const MAX_PARENTS = 40;
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     const [
       studentCount, teacherCount, parentCount, gradeCount, invoiceCount,
-      sessionCount, leadCount, mealCount, assetCount, libraryCount,
+      sessionCount, leadCount, mealCount, assetCount, libraryCount, agentItemCount, knowledgeCount,
       classes, teachers, students,
     ] = await Promise.all([
       prisma.student.count(),
@@ -46,6 +55,8 @@ export async function GET(request: NextRequest) {
       prisma.mealOrder.count(),
       prisma.asset.count(),
       prisma.libraryItem.count(),
+      prisma.agentItem.count(),
+      prisma.knowledgeDoc.count(),
       prisma.class.findMany({
         select: { id: true, grade: true, letter: true, curatorId: true, _count: { select: { students: true } } },
         orderBy: [{ grade: 'asc' }, { letter: 'asc' }],
@@ -72,7 +83,8 @@ export async function GET(request: NextRequest) {
       { id: 'd-specialists', label: 'Психолог · Врач', count: sessionCount, meta: 'сессий специалистов' },
       { id: 'd-finance', label: 'Финансы', count: invoiceCount, meta: 'счетов' },
       { id: 'd-admission', label: 'Приёмная', count: leadCount, meta: 'заявок в воронке' },
-      { id: 'd-parents', label: 'Родители', count: parentCount, meta: 'родителей' },
+      { id: 'd-agent', label: 'AI-агенты', count: agentItemCount, meta: 'сигналов агентов' },
+      { id: 'd-knowledge', label: 'База знаний', count: knowledgeCount, meta: 'документов' },
       { id: 'd-kitchen', label: 'Столовая', count: mealCount, meta: 'заказов питания' },
       { id: 'd-assets', label: 'Инвентарь', count: assetCount, meta: 'единиц на учёте' },
       { id: 'd-library', label: 'Библиотека', count: libraryCount, meta: 'книг в фонде' },
@@ -105,21 +117,64 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Ученики — сэмпл на класс, чтобы граф дышал, но не тормозил
+    // Ученики — сэмпл на класс
     const perClass = new Map<string, number>();
+    const sampledStudentIds: string[] = [];
     for (const s of students) {
       const used = perClass.get(s.classId) ?? 0;
       if (used >= STUDENTS_PER_CLASS) continue;
-      perClass.set(s.classId, used + 1);
       if (!classNodeIds.has(`c-${s.classId}`)) continue;
+      perClass.set(s.classId, used + 1);
       nodes.push({ id: `s-${s.id}`, label: `${s.lastName} ${s.firstName[0]}.`, type: 'student', val: 2 });
       links.push({ source: `c-${s.classId}`, target: `s-${s.id}` });
+      sampledStudentIds.push(s.id);
+    }
+
+    // Родители сэмпл-учеников (нейронная связь ученик → родитель)
+    const parentLinks = await prisma.parentStudent.findMany({
+      where: { studentId: { in: sampledStudentIds.slice(0, 60) } },
+      select: {
+        studentId: true,
+        parent: { select: { id: true, firstName: true, lastName: true } },
+      },
+      take: MAX_PARENTS,
+    });
+    const addedParents = new Set<string>();
+    for (const pl of parentLinks) {
+      const pid = `p-${pl.parent.id}`;
+      if (!addedParents.has(pid)) {
+        nodes.push({ id: pid, label: `${pl.parent.lastName} ${pl.parent.firstName[0]}.`, type: 'parent', val: 2.5 });
+        addedParents.add(pid);
+      }
+      links.push({ source: `s-${pl.studentId}`, target: pid });
+    }
+
+    // ── Демо-сценарий: «учитель ставит 2 → сигнал родителю» по реальным узлам ──
+    const scenario: ScenarioStep[] = [];
+    const scenarioPl = parentLinks[0]; // ученик, у которого точно есть родитель в графе
+    if (scenarioPl) {
+      const student = students.find((s) => s.id === scenarioPl.studentId);
+      const cls = classes.find((c) => c.id === student?.classId);
+      // учитель, ведущий в этом классе (или первый)
+      const teacher = teachers.find((t) => t.subjects.some((s) => s.classId === student?.classId)) ?? teachers[0];
+      if (student && cls && teacher) {
+        const studentName = `${student.lastName} ${student.firstName[0]}.`;
+        scenario.push(
+          { from: `t-${teacher.id}`, to: 'd-journal', caption: `Учитель ${teacher.lastName} ставит оценку «2» в журнал` },
+          { from: 'd-journal', to: 'school', caption: 'Журнал мгновенно обновляет единое ядро' },
+          { from: 'school', to: `c-${cls.id}`, caption: `Ядро знает: ученик из класса ${cls.grade}${cls.letter}` },
+          { from: `c-${cls.id}`, to: `s-${student.id}`, caption: `Профиль ученика ${studentName} обновлён` },
+          { from: 'school', to: 'd-agent', caption: 'AI-агент замечает низкую оценку — правило сработало' },
+          { from: `s-${student.id}`, to: `p-${scenarioPl.parent.id}`, caption: 'Родитель получает заботливый сигнал — без звонков и журналов' },
+        );
+      }
     }
 
     return successResponse({
       nodes,
       links,
-      stats: { учеников: studentCount, педагогов: teacherCount, классов: classes.length, узлов: nodes.length, связей: links.length },
+      scenario,
+      stats: { учеников: studentCount, педагогов: teacherCount, классов: classes.length, родителей: parentCount, узлов: nodes.length, связей: links.length },
     });
   } catch (error) {
     console.error('GET /api/v1/core/graph error:', error);

@@ -14,7 +14,7 @@ import {
   Title,
 } from '@mantine/core';
 import { RoleGate } from '@/shared/components/auth/RoleGate';
-import { TYPE_COLORS, TYPE_LABELS, type GraphNode, type GraphLinkRaw } from './CoreGraph';
+import { TYPE_COLORS, TYPE_LABELS, type GraphNode, type GraphLinkRaw, type ScenarioStep } from './CoreGraph';
 
 // canvas-граф — только на клиенте (ssr:false)
 const CoreGraph = dynamic(() => import('./CoreGraph'), {
@@ -36,6 +36,7 @@ const CoreGraph = dynamic(() => import('./CoreGraph'), {
 interface GraphData {
   nodes: GraphNode[];
   links: GraphLinkRaw[];
+  scenario?: ScenarioStep[];
   stats?: Record<string, number>;
 }
 
@@ -119,6 +120,7 @@ export default function CoreGraphPage() {
               height={size.height}
               nodes={data.nodes}
               links={data.links}
+              scenario={data.scenario ?? []}
               onNodeClick={setSelected}
             />
           )}
