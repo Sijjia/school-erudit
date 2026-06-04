@@ -49,7 +49,14 @@ export const SIDEBAR_NAV: NavRoute[] = [
   { href: '/diary', label: 'Дневник', roles: ['student', 'parent'] },
   { href: '/today', label: 'Сегодня', roles: ['teacher', 'curator', 'super_admin', 'zavuch'] },
   { href: '/agent', label: 'Панель агента', roles: [...ALL_AUTH, ...NEW_STAFF] },
-  { href: '/journal', label: 'Журнал', roles: STAFF_TIER },
+  {
+    href: '/journal',
+    label: 'Журнал',
+    roles: STAFF_TIER,
+    children: [
+      { href: '/journal/attendance', label: 'Посещаемость', roles: STAFF_TIER },
+    ],
+  },
   // Админская «Главная» — всешкольная статистика; учителю не показываем (у него «Сегодня»)
   { href: '/dashboard', label: 'Главная', roles: ['super_admin', 'analyst', 'zavuch', 'specialist', 'secretary'] },
   // Ядро экосистемы: граф связей + CRM-воронка приёмной + база знаний

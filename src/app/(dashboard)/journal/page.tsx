@@ -1,42 +1,70 @@
 'use client';
 
 /**
- * «Журнал класса» — простое EduPage-стиль оценивание: выбрал класс+предмет →
- * строки учеников с инлайн-вводом балла (Enter прыгает вниз) + посещаемость.
- * Тот же быстрый грид, что в «Сегодня», но для любого класса и любой даты.
+ * Журнал EduPage-style (этап 2): назначения как колонки с очками,
+ * среднее число → вычисленная (примерная) → итоговая оценка (через модерацию),
+ * заметки-замечания с типами. Посещаемость — отдельный экран /journal/attendance.
+ * Старый вид сохранён на /journal/classic.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
-  Button, Group, Loader, NumberInput, Paper, ScrollArea, Select,
-  Stack, Table, Text, TextInput, Title,
+  ActionIcon, Avatar, Badge, Button, Group, Loader, Menu, Modal, NumberInput,
+  Paper, ScrollArea, Select, Stack, Table, Text, TextInput, Title, Tooltip,
 } from '@mantine/core';
-import { IconBook2, IconCircleCheck } from '@tabler/icons-react';
+import {
+  IconBook2, IconCalendarCheck, IconCheck, IconDots, IconHistory, IconPencil, IconPlus, IconTrash,
+} from '@tabler/icons-react';
 import { RoleGate } from '@/shared/components/auth/RoleGate';
 import { useRole } from '@/shared/hooks/useRole';
 import { EditableGradeBadge } from '@/shared/components/grading/EditableGradeBadge';
+import { NoteTypeModal } from '@/shared/components/notes/NoteTypeModal';
+import { NotesDrawer } from '@/shared/components/notes/NotesDrawer';
 
 interface Pair { subjectId: string; subjectName: string; classId: string; className: string }
 interface Period { id: string; name: string; isActive: boolean }
-interface Student { id: string; firstName: string; lastName: string; middleName?: string | null }
+interface Student { id: string; firstName: string; lastName: string; photo?: string | null }
 interface Category { id: string; name: string; weight: number }
-interface Grade { id: string; studentId: string; value: number; category: { id: string; name: string; weight: number }; editWindowExpired?: boolean }
+interface Assignment { id: string; title: string; shortName?: string | null; maxPoints: number; date: string; categoryId?: string | null }
+interface Grade {
+  id: string; studentId: string; value: number; assignmentId?: string | null; status?: string;
+  scale?: string;
+  category: { id: string; name: string; weight: number }; editWindowExpired?: boolean;
+}
 
-type AttStatus = 'present' | 'absent' | 'late';
-const ATT_BTN: { status: AttStatus; label: string; color: string }[] = [
-  { status: 'present', label: 'П', color: 'green' },
-  { status: 'absent', label: 'Н', color: 'red' },
-  { status: 'late', label: 'О', color: 'yellow' },
-];
+/** Оценка → 5-балльный эквивалент (старые HUNDRED делим на 20). */
+function gradeToFive(gr: Grade): number {
+  return gr.scale === 'HUNDRED' || gr.value > 5 ? gr.value / 20 : gr.value;
+}
+
 const SEC = 'var(--mantine-color-dimmed)';
+
+/** Перевод процента в 5-балльную «вычисленную» оценку. */
+function computeFive(percent: number): number {
+  if (percent >= 85) return 5;
+  if (percent >= 70) return 4;
+  if (percent >= 55) return 3;
+  return 2;
+}
+const FIVE_COLOR: Record<number, string> = { 5: 'teal', 4: 'green', 3: 'yellow', 2: 'red' };
+
+const FINAL_STATUS: Record<string, { label: string; color: string }> = {
+  submitted: { label: 'на модерации', color: 'yellow' },
+  moderated: { label: 'одобрена', color: 'teal' },
+  published: { label: 'итоговая', color: 'green' },
+  draft: { label: 'черновик', color: 'gray' },
+};
 
 function todayISO() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+const fmtDM = (iso: string) => new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
 
 function Journal() {
   const { role } = useRole();
   const canDelete = role === 'zavuch' || role === 'super_admin' || role === 'analyst';
+
   const [loading, setLoading] = useState(true);
   const [pairs, setPairs] = useState<Pair[]>([]);
   const [periods, setPeriods] = useState<Period[]>([]);
@@ -45,17 +73,32 @@ function Journal() {
 
   const [pairKey, setPairKey] = useState<string | null>(null);
   const [periodId, setPeriodId] = useState<string | null>(null);
-  const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [date, setDate] = useState(todayISO());
 
   const [students, setStudents] = useState<Student[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
-  const [attendance, setAttendance] = useState<Record<string, AttStatus>>({});
-  const [drafts, setDrafts] = useState<Record<string, number | ''>>({});
+  const [noteCounts, setNoteCounts] = useState<Record<string, number>>({});
   const [gridLoading, setGridLoading] = useState(false);
-  const [savingId, setSavingId] = useState<string | null>(null);
-  const [attSaving, setAttSaving] = useState<string | null>(null);
-  const [attAllSaving, setAttAllSaving] = useState(false);
+
+  // ввод балла в ячейку
+  const [editCell, setEditCell] = useState<{ studentId: string; assignmentId: string } | null>(null);
+  const [cellValue, setCellValue] = useState<number | ''>('');
+  const [cellSaving, setCellSaving] = useState(false);
+
+  // модал назначения (создание/редактирование)
+  const [asgModal, setAsgModal] = useState<{ mode: 'create' | 'edit'; asg?: Assignment } | null>(null);
+  const [asgForm, setAsgForm] = useState({ title: '', shortName: '', categoryId: '' as string | null, maxPoints: 100, date: todayISO() });
+  const [asgSaving, setAsgSaving] = useState(false);
+
+  // итоговые
+  const [finalsOpen, setFinalsOpen] = useState(false);
+  const [finalDrafts, setFinalDrafts] = useState<Record<string, number>>({});
+  const [finalsSaving, setFinalsSaving] = useState(false);
+
+  // заметки
+  const [noteFor, setNoteFor] = useState<Student | null>(null);
+  const [notesViewFor, setNotesViewFor] = useState<Student | null>(null);
+  const [notesRefresh, setNotesRefresh] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -78,8 +121,6 @@ function Journal() {
           const uniq: Category[] = [];
           for (const c of cats.data as Category[]) if (!seen.has(c.name)) { seen.add(c.name); uniq.push(c); }
           setCategories(uniq);
-          const assess = uniq.find((c) => /контрол|тест|зачёт|экзам/i.test(c.name)) ?? uniq[0];
-          setCategoryId(assess?.id ?? null);
         }
       } finally {
         setLoading(false);
@@ -88,53 +129,34 @@ function Journal() {
   }, []);
 
   const selected = useMemo(() => pairs.find((p) => `${p.subjectId}|${p.classId}` === pairKey) ?? null, [pairs, pairKey]);
+  const finalCategory = useMemo(() => categories.find((c) => /итогов/i.test(c.name)) ?? null, [categories]);
+  const defaultAsgCategory = useMemo(
+    () => categories.find((c) => /классн|самостоятельн/i.test(c.name)) ?? categories[0] ?? null,
+    [categories],
+  );
 
   const loadGrid = useCallback(async () => {
     if (!selected || !periodId) return;
     setGridLoading(true);
-    setDrafts({});
-    setAttendance({});
     try {
-      const [sRes, gRes, aRes] = await Promise.all([
+      const q = `classId=${selected.classId}&subjectId=${selected.subjectId}&periodId=${periodId}`;
+      const [sRes, gRes, aRes, nRes] = await Promise.all([
         fetch(`/api/v1/students?classId=${selected.classId}`),
-        fetch(`/api/v1/grading?classId=${selected.classId}&subjectId=${selected.subjectId}&periodId=${periodId}`),
-        fetch(`/api/v1/attendance?classId=${selected.classId}&date=${date}`),
+        fetch(`/api/v1/grading?${q}`),
+        fetch(`/api/v1/assignments?${q}`),
+        fetch(`/api/v1/incidents-summary?classId=${selected.classId}`),
       ]);
-      const s = await sRes.json();
-      const g = await gRes.json();
-      const a = await aRes.json();
+      const [s, g, a, n] = await Promise.all([sRes.json(), gRes.json(), aRes.json(), nRes.json()]);
       if (s.success) setStudents(s.data);
       if (g.success) setGrades(g.data);
-      if (a.success) {
-        const map: Record<string, AttStatus> = {};
-        for (const rec of a.data as { studentId: string; status: string }[]) {
-          if (rec.status === 'present' || rec.status === 'absent' || rec.status === 'late') map[rec.studentId] = rec.status;
-        }
-        setAttendance(map);
-      }
+      if (a.success) setAssignments(a.data);
+      if (n.success) setNoteCounts(n.data);
     } finally {
       setGridLoading(false);
     }
-  }, [selected, periodId, date]);
+  }, [selected, periodId]);
 
-  useEffect(() => { if (selected && periodId) loadGrid(); }, [selected, periodId, date, loadGrid]);
-
-  const avgByStudent = useMemo(() => {
-    const acc: Record<string, { sum: number; w: number }> = {};
-    for (const gr of grades) {
-      const a = acc[gr.studentId] ?? { sum: 0, w: 0 };
-      a.sum += gr.value * gr.category.weight; a.w += gr.category.weight; acc[gr.studentId] = a;
-    }
-    const map: Record<string, number> = {};
-    for (const [sid, a] of Object.entries(acc)) map[sid] = a.w ? Math.round((a.sum / a.w) * 10) / 10 : 0;
-    return map;
-  }, [grades]);
-
-  const gradesByStudent = useMemo(() => {
-    const map: Record<string, Grade[]> = {};
-    for (const gr of grades) (map[gr.studentId] ??= []).push(gr);
-    return map;
-  }, [grades]);
+  useEffect(() => { if (selected && periodId) loadGrid(); }, [selected, periodId, loadGrid]);
 
   const reloadGrades = useCallback(async () => {
     if (!selected || !periodId) return;
@@ -142,56 +164,205 @@ function Journal() {
     if (g.success) setGrades(g.data);
   }, [selected, periodId]);
 
-  async function saveGrade(studentId: string) {
-    const value = drafts[studentId];
-    if (value === '' || value === undefined || !selected || !teacherId || !periodId || !categoryId) return;
-    setSavingId(studentId);
+  // оценка по (студент, назначение); прочие — без assignmentId и не итоговые
+  const byCell = useMemo(() => {
+    const map: Record<string, Grade> = {};
+    for (const gr of grades) if (gr.assignmentId) map[`${gr.studentId}|${gr.assignmentId}`] = gr;
+    return map;
+  }, [grades]);
+
+  const otherByStudent = useMemo(() => {
+    const map: Record<string, Grade[]> = {};
+    for (const gr of grades) {
+      if (gr.assignmentId) continue;
+      if (finalCategory && gr.category.id === finalCategory.id) continue;
+      (map[gr.studentId] ??= []).push(gr);
+    }
+    return map;
+  }, [grades, finalCategory]);
+
+  const finalByStudent = useMemo(() => {
+    const map: Record<string, Grade> = {};
+    if (!finalCategory) return map;
+    for (const gr of grades) if (!gr.assignmentId && gr.category.id === finalCategory.id) map[gr.studentId] = gr;
+    return map;
+  }, [grades, finalCategory]);
+
+  /**
+   * Среднее число (%) — только по назначениям (очки).
+   * Вычисленная (5-балльная) — из процентов назначений, либо fallback из прочих
+   * оценок (с учётом шкалы: старые 0–100 делим на 20).
+   */
+  const { percentByStudent, fiveByStudent } = useMemo(() => {
+    const percent: Record<string, number> = {};
+    const five: Record<string, number> = {};
+    for (const st of students) {
+      let got = 0;
+      let max = 0;
+      for (const a of assignments) {
+        const gr = byCell[`${st.id}|${a.id}`];
+        if (gr) { got += gr.value; max += a.maxPoints; }
+      }
+      if (max > 0) {
+        const pct = Math.round((got / max) * 1000) / 10;
+        percent[st.id] = pct;
+        five[st.id] = computeFive(pct);
+        continue;
+      }
+      const others = otherByStudent[st.id] ?? [];
+      if (others.length) {
+        let sum = 0;
+        let w = 0;
+        for (const gr of others) { sum += gradeToFive(gr) * gr.category.weight; w += gr.category.weight; }
+        if (w) {
+          const avg = sum / w;
+          five[st.id] = Math.max(2, Math.min(5, Math.round(avg)));
+        }
+      }
+    }
+    return { percentByStudent: percent, fiveByStudent: five };
+  }, [students, assignments, byCell, otherByStudent]);
+
+  // ── Ввод балла в ячейку ──
+  const startCell = (studentId: string, assignmentId: string) => {
+    setEditCell({ studentId, assignmentId });
+    setCellValue('');
+  };
+
+  const saveCell = async (moveNext = false) => {
+    if (!editCell || cellValue === '' || !selected || !teacherId || !periodId) return;
+    const asg = assignments.find((a) => a.id === editCell.assignmentId);
+    if (!asg) return;
+    setCellSaving(true);
     try {
       const res = await fetch('/api/v1/grading', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId, subjectId: selected.subjectId, categoryId, teacherId, periodId, value: Number(value), scale: 'HUNDRED', date }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: editCell.studentId,
+          subjectId: selected.subjectId,
+          categoryId: asg.categoryId || defaultAsgCategory?.id,
+          teacherId,
+          periodId,
+          value: Number(cellValue),
+          scale: 'HUNDRED',
+          date: asg.date,
+          assignmentId: asg.id,
+        }),
       });
       const json = await res.json();
       if (json.success) {
-        setDrafts((d) => ({ ...d, [studentId]: '' }));
-        const g = await (await fetch(`/api/v1/grading?classId=${selected.classId}&subjectId=${selected.subjectId}&periodId=${periodId}`)).json();
-        if (g.success) setGrades(g.data);
+        await reloadGrades();
+        if (moveNext) {
+          const idx = students.findIndex((s) => s.id === editCell.studentId);
+          const next = students[idx + 1];
+          if (next && !byCell[`${next.id}|${asg.id}`]) {
+            setEditCell({ studentId: next.id, assignmentId: asg.id });
+            setCellValue('');
+            return;
+          }
+        }
+        setEditCell(null);
       }
     } finally {
-      setSavingId(null);
+      setCellSaving(false);
     }
-  }
+  };
 
-  async function markAttendance(studentId: string, status: AttStatus) {
-    setAttSaving(studentId);
-    setAttendance((m) => ({ ...m, [studentId]: status }));
-    try {
-      await fetch('/api/v1/attendance', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId, date, status }),
-      });
-    } finally {
-      setAttSaving(null);
-    }
-  }
+  // ── Назначения: создать/редактировать/удалить ──
+  const openAsgCreate = () => {
+    setAsgForm({ title: '', shortName: '', categoryId: defaultAsgCategory?.id ?? null, maxPoints: 100, date: todayISO() });
+    setAsgModal({ mode: 'create' });
+  };
+  const openAsgEdit = (asg: Assignment) => {
+    setAsgForm({
+      title: asg.title,
+      shortName: asg.shortName ?? '',
+      categoryId: asg.categoryId ?? defaultAsgCategory?.id ?? null,
+      maxPoints: asg.maxPoints,
+      date: asg.date.slice(0, 10),
+    });
+    setAsgModal({ mode: 'edit', asg });
+  };
 
-  async function markAllPresent() {
-    if (!students.length) return;
-    setAttAllSaving(true);
-    const next = { ...attendance };
+  const saveAsg = async () => {
+    if (!asgForm.title.trim() || !selected || !teacherId || !periodId) return;
+    setAsgSaving(true);
     try {
-      for (const st of students.filter((s) => !attendance[s.id])) {
-        next[st.id] = 'present';
-        await fetch('/api/v1/attendance', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ studentId: st.id, date, status: 'present' }),
+      if (asgModal?.mode === 'edit' && asgModal.asg) {
+        await fetch(`/api/v1/assignments/${asgModal.asg.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: asgForm.title.trim(),
+            shortName: asgForm.shortName.trim() || null,
+            categoryId: asgForm.categoryId,
+            maxPoints: asgForm.maxPoints,
+            date: new Date(asgForm.date),
+          }),
+        });
+      } else {
+        await fetch('/api/v1/assignments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: asgForm.title.trim(),
+            shortName: asgForm.shortName.trim() || undefined,
+            classId: selected.classId,
+            subjectId: selected.subjectId,
+            teacherId,
+            periodId,
+            categoryId: asgForm.categoryId ?? undefined,
+            maxPoints: asgForm.maxPoints,
+            date: asgForm.date,
+          }),
         });
       }
-      setAttendance(next);
+      setAsgModal(null);
+      await loadGrid();
     } finally {
-      setAttAllSaving(false);
+      setAsgSaving(false);
     }
-  }
+  };
+
+  const deleteAsg = async (asg: Assignment) => {
+    if (!confirm(`Удалить назначение «${asg.title}»? Оценки останутся в «Прочих».`)) return;
+    await fetch(`/api/v1/assignments/${asg.id}`, { method: 'DELETE' });
+    await loadGrid();
+  };
+
+  // ── Итоговые ──
+  const openFinals = () => {
+    const drafts: Record<string, number> = {};
+    for (const st of students) {
+      if (finalByStudent[st.id]) continue;
+      const five = fiveByStudent[st.id];
+      if (five !== undefined) drafts[st.id] = five;
+    }
+    setFinalDrafts(drafts);
+    setFinalsOpen(true);
+  };
+
+  const saveFinals = async () => {
+    if (!selected || !teacherId || !periodId || !finalCategory) return;
+    setFinalsSaving(true);
+    try {
+      for (const [studentId, value] of Object.entries(finalDrafts)) {
+        await fetch('/api/v1/grading', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            studentId, subjectId: selected.subjectId, categoryId: finalCategory.id,
+            teacherId, periodId, value, scale: 'FIVE', date: todayISO(),
+          }),
+        });
+      }
+      setFinalsOpen(false);
+      await reloadGrades();
+    } finally {
+      setFinalsSaving(false);
+    }
+  };
 
   if (loading) return <Group justify="center" p="xl"><Loader /></Group>;
 
@@ -201,20 +372,38 @@ function Journal() {
 
   return (
     <Stack gap="md" p="md">
-      <Group gap="xs">
-        <IconBook2 size={26} color="var(--mantine-color-blue-6)" />
-        <div>
-          <Title order={2}>Журнал класса</Title>
-          <Text c="dimmed" size="sm">Выберите класс и предмет — ставьте баллы прямо в строках.</Text>
-        </div>
+      <Group justify="space-between" align="flex-end" wrap="wrap">
+        <Group gap="xs">
+          <IconBook2 size={26} color="var(--mantine-color-blue-6)" />
+          <div>
+            <Title order={2}>Журнал</Title>
+            <Text c="dimmed" size="sm">Назначения — колонки. Клик по пустой клетке — поставить балл.</Text>
+          </div>
+        </Group>
+        <Group gap="xs">
+          <Button component={Link} href="/journal/attendance" variant="light" leftSection={<IconCalendarCheck size={16} />}>
+            Посещаемость
+          </Button>
+          <Button component={Link} href="/journal/classic" variant="subtle" size="xs" c="dimmed">
+            классический вид
+          </Button>
+        </Group>
       </Group>
 
       <Paper withBorder p="md" radius="md">
         <Group align="flex-end" gap="sm" wrap="wrap">
           <Select label="Класс и предмет" data={pairOptions} value={pairKey} onChange={setPairKey} searchable w={260} placeholder="Выберите" />
           <Select label="Период" data={periodOptions} value={periodId} onChange={setPeriodId} w={150} />
-          <TextInput label="Дата" type="date" value={date} onChange={(e) => setDate(e.currentTarget.value)} w={160} />
-          <Select label="Тип работы (вес)" data={catOptions} value={categoryId} onChange={setCategoryId} searchable w={200} />
+          {selected && teacherId && (
+            <>
+              <Button leftSection={<IconPlus size={16} />} onClick={openAsgCreate}>Новое назначение</Button>
+              {finalCategory && (
+                <Button variant="light" color="teal" leftSection={<IconCheck size={16} />} onClick={openFinals}>
+                  Выставить итоговые
+                </Button>
+              )}
+            </>
+          )}
         </Group>
       </Paper>
 
@@ -222,79 +411,227 @@ function Journal() {
         <Text c="dimmed" ta="center" py="lg">Выберите класс и предмет, чтобы открыть журнал.</Text>
       ) : !teacherId ? (
         <Text c="dimmed" ta="center" py="lg">Выставление оценок доступно учителю (нет привязки к преподавателю).</Text>
+      ) : gridLoading ? (
+        <Group justify="center" p="md"><Loader size="sm" /></Group>
       ) : (
-        <Paper withBorder p="md" radius="md">
-          <Group justify="space-between" mb="sm" wrap="nowrap">
-            <Text fw={600}>Журнал · {selected.className} · {selected.subjectName}</Text>
-            <Button size="xs" variant="light" color="green" loading={attAllSaving} onClick={markAllPresent} leftSection={<IconCircleCheck size={14} />}>
-              Все были
-            </Button>
-          </Group>
-          {gridLoading ? (
-            <Group justify="center" p="md"><Loader size="sm" /></Group>
-          ) : (
-            <ScrollArea>
-              <Table highlightOnHover style={{ minWidth: 600 }}>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th style={{ color: SEC, fontSize: 12 }}>Ученик</Table.Th>
-                    <Table.Th style={{ color: SEC, fontSize: 12, width: 130 }}>Был</Table.Th>
-                    <Table.Th style={{ color: SEC, fontSize: 12 }}>Оценки</Table.Th>
-                    <Table.Th style={{ color: SEC, fontSize: 12, width: 70 }}>Итог</Table.Th>
-                    <Table.Th style={{ color: SEC, fontSize: 12, width: 150 }}>Поставить балл</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {students.map((st, idx) => (
+        <Paper withBorder radius="md" style={{ overflow: 'hidden' }}>
+          <ScrollArea>
+            <Table highlightOnHover style={{ minWidth: 760 }}>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th style={{ color: SEC, fontSize: 12, minWidth: 190, position: 'sticky', left: 0, background: 'white', zIndex: 2 }}>
+                    Ученик
+                  </Table.Th>
+                  {assignments.map((a) => (
+                    <Table.Th key={a.id} style={{ fontSize: 12, minWidth: 86, textAlign: 'center' }}>
+                      <Group gap={2} justify="center" wrap="nowrap">
+                        <Tooltip label={`${a.title} · из ${a.maxPoints} очков`}>
+                          <div>
+                            <Text size="xs" fw={700} lh={1.1}>{a.shortName || a.title.slice(0, 8)}</Text>
+                            <Text size="xs" c={SEC} lh={1.1}>{fmtDM(a.date)} · {a.maxPoints}</Text>
+                          </div>
+                        </Tooltip>
+                        <Menu shadow="md" position="bottom-end">
+                          <Menu.Target>
+                            <ActionIcon size="xs" variant="subtle" color="gray"><IconDots size={12} /></ActionIcon>
+                          </Menu.Target>
+                          <Menu.Dropdown>
+                            <Menu.Item leftSection={<IconPencil size={13} />} onClick={() => openAsgEdit(a)}>Изменить</Menu.Item>
+                            <Menu.Item leftSection={<IconTrash size={13} />} color="red" onClick={() => deleteAsg(a)}>Удалить</Menu.Item>
+                          </Menu.Dropdown>
+                        </Menu>
+                      </Group>
+                    </Table.Th>
+                  ))}
+                  <Table.Th style={{ color: SEC, fontSize: 12, minWidth: 90 }}>Прочие</Table.Th>
+                  <Table.Th style={{ color: '#1971c2', fontSize: 12, width: 78, textAlign: 'center', background: '#e7f5ff' }}>Среднее число</Table.Th>
+                  <Table.Th style={{ color: '#e8590c', fontSize: 12, width: 92, textAlign: 'center', background: '#fff4e6' }}>Вычисленная</Table.Th>
+                  <Table.Th style={{ color: SEC, fontSize: 12, width: 92, textAlign: 'center' }}>Итоговая</Table.Th>
+                  <Table.Th style={{ color: SEC, fontSize: 12, width: 84, textAlign: 'center' }}>Заметки</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {students.map((st) => {
+                  const pct = percentByStudent[st.id];
+                  const five = fiveByStudent[st.id];
+                  const fin = finalByStudent[st.id];
+                  const notes = noteCounts[st.id] ?? 0;
+                  return (
                     <Table.Tr key={st.id}>
-                      <Table.Td><Text size="sm">{st.lastName} {st.firstName}</Text></Table.Td>
-                      <Table.Td>
-                        <Button.Group>
-                          {ATT_BTN.map((b) => (
-                            <Button key={b.status} size="compact-xs" px={8}
-                              variant={attendance[st.id] === b.status ? 'filled' : 'default'} color={b.color}
-                              loading={attSaving === st.id && attendance[st.id] === b.status}
-                              onClick={() => markAttendance(st.id, b.status)}>
-                              {b.label}
-                            </Button>
-                          ))}
-                        </Button.Group>
-                      </Table.Td>
-                      <Table.Td>
-                        <Group gap={4}>
-                          {(gradesByStudent[st.id] ?? []).map((gr) => (
-                            <EditableGradeBadge key={gr.id} grade={gr} canDelete={canDelete} onChanged={reloadGrades} />
-                          ))}
-                          {!(gradesByStudent[st.id]?.length) && <Text size="xs" c={SEC}>—</Text>}
+                      <Table.Td style={{ position: 'sticky', left: 0, background: 'white', zIndex: 1 }}>
+                        <Group gap={8} wrap="nowrap">
+                          <Avatar size={26} radius="xl" src={st.photo || undefined} color="blue">
+                            {st.lastName[0]}{st.firstName[0]}
+                          </Avatar>
+                          <Text size="sm" lineClamp={1}>{st.lastName} {st.firstName}</Text>
                         </Group>
                       </Table.Td>
-                      <Table.Td><Text fw={700} c={avgByStudent[st.id] ? '#2f9e44' : SEC}>{avgByStudent[st.id] ?? '—'}</Text></Table.Td>
+
+                      {assignments.map((a) => {
+                        const gr = byCell[`${st.id}|${a.id}`];
+                        const isEditing = editCell?.studentId === st.id && editCell?.assignmentId === a.id;
+                        return (
+                          <Table.Td key={a.id} style={{ textAlign: 'center', cursor: gr ? undefined : 'pointer' }}
+                            onClick={() => { if (!gr && !isEditing) startCell(st.id, a.id); }}>
+                            {gr ? (
+                              <EditableGradeBadge grade={gr} canDelete={canDelete} onChanged={reloadGrades} />
+                            ) : isEditing ? (
+                              <NumberInput
+                                size="xs" w={64} min={0} max={a.maxPoints} hideControls autoFocus
+                                placeholder={`0–${a.maxPoints}`}
+                                value={cellValue}
+                                onChange={(v) => setCellValue(v as number)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') saveCell(true);
+                                  if (e.key === 'Escape') setEditCell(null);
+                                }}
+                                onBlur={() => { if (!cellSaving && cellValue === '') setEditCell(null); }}
+                                rightSection={cellSaving ? <Loader size={12} /> : undefined}
+                              />
+                            ) : (
+                              <Text size="sm" c="#ced4da">·</Text>
+                            )}
+                          </Table.Td>
+                        );
+                      })}
+
                       <Table.Td>
-                        <Group gap={4} wrap="nowrap">
-                          <NumberInput size="xs" w={70} min={0} max={100} hideControls placeholder="0–100"
-                            value={drafts[st.id] ?? ''}
-                            onChange={(v) => setDrafts((d) => ({ ...d, [st.id]: v as number }))}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                saveGrade(st.id);
-                                const next = students[idx + 1];
-                                if (next) (document.getElementById(`jg-${next.id}`) as HTMLInputElement | null)?.focus();
-                              }
-                            }}
-                            id={`jg-${st.id}`} />
-                          <Button size="xs" variant="light" loading={savingId === st.id} onClick={() => saveGrade(st.id)}
-                            disabled={drafts[st.id] === '' || drafts[st.id] === undefined}>ОК</Button>
+                        <Group gap={4}>
+                          {(otherByStudent[st.id] ?? []).slice(0, 4).map((gr) => (
+                            <EditableGradeBadge key={gr.id} grade={gr} canDelete={canDelete} onChanged={reloadGrades} />
+                          ))}
+                          {!(otherByStudent[st.id]?.length) && <Text size="xs" c={SEC}>—</Text>}
+                        </Group>
+                      </Table.Td>
+
+                      <Table.Td style={{ textAlign: 'center', background: '#f4faff' }}>
+                        <Text size="sm" fw={700} c={pct !== undefined ? '#1971c2' : SEC}>
+                          {pct !== undefined ? pct : '—'}
+                        </Text>
+                      </Table.Td>
+
+                      <Table.Td style={{ textAlign: 'center', background: '#fff9f2' }}>
+                        {five !== undefined ? (
+                          <Tooltip label="Примерная оценка — видна ученику как ориентир">
+                            <Badge color={FIVE_COLOR[five]} variant="light" size="lg" radius="sm">
+                              {five}
+                            </Badge>
+                          </Tooltip>
+                        ) : (
+                          <Text size="xs" c={SEC}>—</Text>
+                        )}
+                      </Table.Td>
+
+                      <Table.Td style={{ textAlign: 'center' }}>
+                        {fin ? (
+                          <Tooltip label={FINAL_STATUS[fin.status ?? 'published']?.label ?? ''}>
+                            <Badge color={FINAL_STATUS[fin.status ?? 'published']?.color ?? 'green'} size="lg" radius="sm">
+                              {fin.value}
+                            </Badge>
+                          </Tooltip>
+                        ) : five !== undefined && finalCategory ? (
+                          <Tooltip label="Зафиксировать итоговую (уйдёт на модерацию завучу)">
+                            <ActionIcon variant="light" color="teal" size="sm"
+                              onClick={() => { setFinalDrafts({ [st.id]: five }); setFinalsOpen(true); }}>
+                              <IconCheck size={14} />
+                            </ActionIcon>
+                          </Tooltip>
+                        ) : (
+                          <Text size="xs" c={SEC}>—</Text>
+                        )}
+                      </Table.Td>
+
+                      <Table.Td style={{ textAlign: 'center' }}>
+                        <Group gap={4} justify="center" wrap="nowrap">
+                          {notes > 0 && (
+                            <Tooltip label="История заметок">
+                              <Badge size="sm" variant="light" color="orange" radius="sm" style={{ cursor: 'pointer' }}
+                                leftSection={<IconHistory size={10} />}
+                                onClick={() => setNotesViewFor(st)}>
+                                {notes}
+                              </Badge>
+                            </Tooltip>
+                          )}
+                          <Tooltip label="Новая заметка">
+                            <ActionIcon size="sm" variant="subtle" onClick={() => setNoteFor(st)}>
+                              <IconPlus size={14} />
+                            </ActionIcon>
+                          </Tooltip>
                         </Group>
                       </Table.Td>
                     </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            </ScrollArea>
-          )}
-          <Text size="xs" c={SEC} mt="xs">Балл 0–100, вес из типа работы. Итог — взвешенное среднее. Оценка ставится сразу.</Text>
+                  );
+                })}
+              </Table.Tbody>
+            </Table>
+          </ScrollArea>
+          <Text size="xs" c={SEC} p="xs">
+            Балл — очки назначения. Среднее число — % набранных очков. Вычисленная — примерная пятибалльная. Итоговая идёт на модерацию завучу.
+          </Text>
         </Paper>
       )}
+
+      {/* Модал назначения */}
+      <Modal opened={!!asgModal} onClose={() => setAsgModal(null)}
+        title={asgModal?.mode === 'edit' ? 'Изменить назначение' : 'Новое назначение / экзамен'} centered>
+        <Stack gap="sm">
+          <TextInput label="Название" required placeholder="Классная работа" value={asgForm.title}
+            onChange={(e) => setAsgForm({ ...asgForm, title: e.currentTarget.value })} />
+          <Group grow>
+            <TextInput label="Краткое имя" placeholder="КР1" value={asgForm.shortName}
+              onChange={(e) => setAsgForm({ ...asgForm, shortName: e.currentTarget.value })} />
+            <NumberInput label="Кол-во очков" min={1} max={100} value={asgForm.maxPoints}
+              onChange={(v) => setAsgForm({ ...asgForm, maxPoints: Number(v) || 100 })} />
+          </Group>
+          <Select label="Тип работы (вес)" data={catOptions} value={asgForm.categoryId} searchable
+            onChange={(v) => setAsgForm({ ...asgForm, categoryId: v })} />
+          <TextInput label="Дата назначения" type="date" value={asgForm.date}
+            onChange={(e) => setAsgForm({ ...asgForm, date: e.currentTarget.value })} />
+          <Button onClick={saveAsg} loading={asgSaving} disabled={!asgForm.title.trim()}>
+            Сохранить
+          </Button>
+        </Stack>
+      </Modal>
+
+      {/* Модал итоговых */}
+      <Modal opened={finalsOpen} onClose={() => setFinalsOpen(false)} title="Итоговые оценки" centered>
+        <Stack gap="xs">
+          <Text size="sm" c="dimmed">
+            Предзаполнено из вычисленной. После сохранения оценки уйдут на модерацию завучу.
+          </Text>
+          {Object.keys(finalDrafts).length === 0 ? (
+            <Text c="dimmed" ta="center" py="md">Все итоговые уже выставлены (или нет данных для расчёта).</Text>
+          ) : (
+            students.filter((st) => finalDrafts[st.id] !== undefined).map((st) => (
+              <Group key={st.id} justify="space-between">
+                <Text size="sm">{st.lastName} {st.firstName}</Text>
+                <NumberInput size="xs" w={70} min={2} max={5} value={finalDrafts[st.id]}
+                  onChange={(v) => setFinalDrafts((d) => ({ ...d, [st.id]: Number(v) || 2 }))} />
+              </Group>
+            ))
+          )}
+          <Button onClick={saveFinals} loading={finalsSaving} disabled={Object.keys(finalDrafts).length === 0} mt="xs">
+            Сохранить и отправить на модерацию
+          </Button>
+        </Stack>
+      </Modal>
+
+      <NoteTypeModal
+        opened={!!noteFor}
+        onClose={() => setNoteFor(null)}
+        studentId={noteFor?.id ?? null}
+        studentName={noteFor ? `${noteFor.lastName} ${noteFor.firstName}` : undefined}
+        onSaved={() => {
+          setNoteCounts((c) => ({ ...c, [noteFor!.id]: (c[noteFor!.id] ?? 0) + 1 }));
+          setNotesRefresh((k) => k + 1);
+        }}
+      />
+      <NotesDrawer
+        studentId={notesViewFor?.id ?? null}
+        studentName={notesViewFor ? `${notesViewFor.lastName} ${notesViewFor.firstName}` : undefined}
+        onClose={() => setNotesViewFor(null)}
+        refreshKey={notesRefresh}
+      />
     </Stack>
   );
 }

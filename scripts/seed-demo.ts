@@ -523,6 +523,97 @@ async function main() {
     }
   }
 
+  // 15b. Этап 2: итоговые оценки идут через модерацию завуча (по ТЗ)
+  const modFix = await prisma.gradeCategory.updateMany({
+    where: { name: { contains: 'Итоговая' }, requiresModeration: false },
+    data: { requiresModeration: true },
+  })
+  if (modFix.count) console.log(`  + final categories set to moderation: ${modFix.count}`)
+
+  // 16. Этап 2: назначения-колонки журнала + баллы + заметки-эмодзи
+  const asgCount = await prisma.assignment.count()
+  if (asgCount === 0) {
+    // назначение создаём для пары учителя matematik (демо-учитель показа)
+    const demoTeacher = await prisma.teacher.findFirst({
+      where: { user: { login: 'matematik' } },
+      include: { subjects: { take: 1 } },
+    })
+    const ts0 = demoTeacher?.subjects[0]
+      ? { teacherId: demoTeacher.id, subjectId: demoTeacher.subjects[0].subjectId, classId: demoTeacher.subjects[0].classId }
+      : teacherSubjects[0]
+    const classnaya = await prisma.gradeCategory.findFirst({ where: { name: { contains: 'лассная' } } })
+      ?? await prisma.gradeCategory.findFirst()
+    const DAY3 = 864e5
+    const asgDefs = [
+      { title: 'Классная работа', shortName: 'КЛ1', maxPoints: 20, daysAgo: 12, categoryId: classnaya?.id },
+      { title: 'Домашняя работа', shortName: 'ДЗ1', maxPoints: 20, daysAgo: 8, categoryId: classnaya?.id },
+      { title: 'Контрольная работа', shortName: 'КР1', maxPoints: 40, daysAgo: 4, categoryId: kontrolnaya.id },
+    ]
+    const created: { id: string; maxPoints: number; categoryId: string | null; date: Date }[] = []
+    for (const d of asgDefs) {
+      const a = await prisma.assignment.create({
+        data: {
+          title: d.title,
+          shortName: d.shortName,
+          classId: ts0.classId,
+          subjectId: ts0.subjectId,
+          teacherId: ts0.teacherId,
+          periodId: period.id,
+          categoryId: d.categoryId ?? null,
+          maxPoints: d.maxPoints,
+          date: new Date(Date.now() - d.daysAgo * DAY3),
+        },
+      })
+      created.push({ id: a.id, maxPoints: d.maxPoints, categoryId: d.categoryId ?? null, date: a.date })
+    }
+    // баллы 8 ученикам по назначениям (реалистичный разброс)
+    const asgStudents = await prisma.student.findMany({ where: { classId: ts0.classId }, take: 8, select: { id: true } })
+    let asgGrades = 0
+    for (let si = 0; si < asgStudents.length; si++) {
+      for (let ai = 0; ai < created.length; ai++) {
+        const a = created[ai]
+        const ratio = [0.95, 0.85, 0.7, 0.9, 0.55, 0.8, 0.65, 0.75][(si + ai) % 8]
+        await prisma.grade.create({
+          data: {
+            studentId: asgStudents[si].id,
+            subjectId: ts0.subjectId,
+            categoryId: a.categoryId ?? kontrolnaya.id,
+            teacherId: ts0.teacherId,
+            periodId: period.id,
+            assignmentId: a.id,
+            value: Math.round(a.maxPoints * ratio),
+            scale: 'HUNDRED',
+            date: a.date,
+            status: 'published',
+          },
+        })
+        asgGrades++
+      }
+    }
+    console.log(`  + assignments: ${created.length}, баллов: ${asgGrades}`)
+
+    // заметки-эмодзи (этап 2)
+    const noteDefs = [
+      { i: 0, type: 'active', description: 'Активно работал у доски' },
+      { i: 1, type: 'late', description: 'Опоздал на 10 минут' },
+      { i: 2, type: 'good_behavior', description: 'Помог дежурным' },
+      { i: 3, type: 'no_homework', description: 'Не принёс домашнюю работу' },
+      { i: 4, type: 'excellent', description: 'Лучшая работа в классе' },
+    ]
+    let noteCount = 0
+    for (const n of noteDefs) {
+      const st = asgStudents[n.i]
+      if (!st) continue
+      const dup = await prisma.behaviorIncident.findFirst({ where: { studentId: st.id, type: n.type } })
+      if (dup) continue
+      await prisma.behaviorIncident.create({
+        data: { studentId: st.id, reporterId: adminUser.id, type: n.type, description: n.description, status: 'moderated', parentNotified: true },
+      })
+      noteCount++
+    }
+    console.log(`  + notes: ${noteCount}`)
+  }
+
   console.log('--- seed-demo: готово ---')
 }
 

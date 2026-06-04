@@ -320,6 +320,28 @@ model GradeCategory {
   grades Grade[]
 }
 
+/// Назначение (EduPage-style): колонка журнала — классная/контрольная/домашняя
+/// работа с количеством очков. Оценки привязываются к назначению.
+model Assignment {
+  id         String   @id @default(cuid())
+  classId    String
+  subjectId  String
+  teacherId  String // teacher.id
+  periodId   String
+  title      String
+  shortName  String? // короткая шапка колонки
+  categoryId String? // тип работы (вес/модерация)
+  maxPoints  Int      @default(100)
+  date       DateTime
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  grades Grade[]
+
+  @@index([classId, subjectId, periodId, date])
+}
+
 model Grade {
   id         String      @id @default(cuid())
   studentId  String
@@ -327,6 +349,9 @@ model Grade {
   categoryId String
   teacherId  String
   periodId   String
+  /// привязка к назначению-колонке (EduPage); null = «прочие» оценки
+  assignmentId String?
+  assignment   Assignment? @relation(fields: [assignmentId], references: [id])
   value      Int
   scale      GradeScale  @default(FIVE)
   comment    String?     @db.VarChar(500)
@@ -347,6 +372,7 @@ model Grade {
 
   @@index([studentId, subjectId, periodId])
   @@index([status])
+  @@index([assignmentId])
 }
 
 enum GradeStatus {

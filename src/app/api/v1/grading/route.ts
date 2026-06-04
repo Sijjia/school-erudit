@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
       date,
       scale,
       comment,
+      assignmentId,
     } = body as {
       studentId?: string;
       subjectId?: string;
@@ -106,6 +107,7 @@ export async function POST(request: NextRequest) {
       date?: string;
       scale?: 'FIVE' | 'TWELVE' | 'HUNDRED' | 'LETTER';
       comment?: string;
+      assignmentId?: string;
     };
 
     if (!studentId || !subjectId || !categoryId || !teacherId || !periodId || value === undefined || !date) {
@@ -160,6 +162,7 @@ export async function POST(request: NextRequest) {
         value,
         scale: gradeScale,
         comment: comment || null,
+        assignmentId: assignmentId || null,
         date: new Date(date),
         status: initialStatus,
       },

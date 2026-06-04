@@ -25,12 +25,63 @@ import {
   IconCheck,
   IconChevronLeft,
   IconChevronRight,
+  IconMessageDots,
   IconMoodEmpty,
   IconNotebook,
   IconStar,
 } from '@tabler/icons-react';
 import { useMe } from '@/shared/hooks/useMe';
 import { RoleGate } from '@/shared/components/auth/RoleGate';
+import { noteTypeInfo } from '@/shared/lib/note-types';
+
+/* ── Заметки (BehaviorIncident, EduPage-style) ── */
+interface NoteItem { id: string; type: string; description: string; status: string; createdAt: string }
+
+function NotesTab({ studentId }: { studentId: string }) {
+  const [items, setItems] = useState<NoteItem[] | null>(null);
+  useEffect(() => {
+    setItems(null);
+    fetch(`/api/v1/students/${studentId}/incidents`)
+      .then((r) => r.json())
+      .then((j) => setItems(j.success ? j.data : []))
+      .catch(() => setItems([]));
+  }, [studentId]);
+
+  if (!items) return <Center py="lg"><Loader size="sm" /></Center>;
+  if (items.length === 0) {
+    return (
+      <Paper withBorder p="lg" radius="md" ta="center">
+        <ThemeIcon variant="light" color="teal" size={44} radius="xl" mx="auto"><IconCheck size={24} /></ThemeIcon>
+        <Text mt="sm" c="dimmed">Заметок от учителей нет — отличная новость!</Text>
+      </Paper>
+    );
+  }
+  return (
+    <Stack gap="sm">
+      {items.map((i) => {
+        const info = noteTypeInfo(i.type);
+        return (
+          <Paper key={i.id} withBorder p="sm" radius="md" style={{ borderLeft: `4px solid var(--mantine-color-${info.color}-5)` }}>
+            <Group justify="space-between" wrap="nowrap" align="flex-start">
+              <Group gap={10} wrap="nowrap" align="flex-start">
+                <Text style={{ fontSize: 22 }}>{info.emoji}</Text>
+                <div>
+                  <Text size="sm" fw={600}>{info.label}</Text>
+                  {i.description && i.description !== info.label && (
+                    <Text size="xs" c="dimmed" mt={2}>{i.description}</Text>
+                  )}
+                </div>
+              </Group>
+              <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+                {new Date(i.createdAt).toLocaleDateString('ru-RU')}
+              </Text>
+            </Group>
+          </Paper>
+        );
+      })}
+    </Stack>
+  );
+}
 
 /* ── Grade colors ── */
 const GRADE_COLORS: Record<number, { bg: string; color: string }> = {
@@ -229,6 +280,7 @@ function DiaryContent() {
           <Tabs.Tab value="attendance" leftSection={<IconCalendarStats size={16} />}>Посещаемость</Tabs.Tab>
           <Tabs.Tab value="homework" leftSection={<IconNotebook size={16} />}>Домашние задания</Tabs.Tab>
           <Tabs.Tab value="schedule" leftSection={<IconCalendar size={16} />}>Расписание</Tabs.Tab>
+          <Tabs.Tab value="notes" leftSection={<IconMessageDots size={16} />}>Заметки</Tabs.Tab>
         </Tabs.List>
 
         {loading && <Center h={200}><Loader /></Center>}
@@ -356,6 +408,11 @@ function DiaryContent() {
               ))}
             </SimpleGrid>
           )}
+        </Tabs.Panel>
+
+        {/* ── Заметки от учителей ── */}
+        <Tabs.Panel value="notes">
+          {studentId ? <NotesTab studentId={studentId} /> : <Text c="dimmed">Нет данных.</Text>}
         </Tabs.Panel>
       </Tabs>
     </Stack>
