@@ -42,6 +42,17 @@ const FEATURES = [
 function landingForRole(role?: string): string {
   if (role === 'student' || role === 'parent') return '/diary';
   if (role === 'teacher' || role === 'curator') return '/today';
+  // узкие роли сотрудников — сразу в свой кабинет
+  const staffHome: Record<string, string> = {
+    accountant: '/workspace/accounting',
+    psychologist: '/workspace/psychologist',
+    doctor: '/workspace/medical',
+    hr: '/staff',
+    librarian: '/library',
+    cook: '/workspace/kitchen',
+    zavhoz: '/workspace/maintenance',
+  };
+  if (role && staffHome[role]) return staffHome[role];
   return '/dashboard';
 }
 
