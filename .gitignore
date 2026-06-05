@@ -47,3 +47,10 @@ next-env.d.ts
 qa-screenshots/
 .claude/scheduled_tasks.lock
 .claude/worktrees/
+.claude/skills/ui-ux-pro-max/
+verify-shots/
+PRAvki/
+
+# исходники Эмира (vision-деки, аудио) — локально; в гит идёт только school/deck
+school/*
+!school/deck/
