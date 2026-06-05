@@ -26,21 +26,21 @@ import {
 const DEMO_PASSWORD = 'erudit2025';
 
 const ROLE_TABS = [
-  { id: 'admin', label: 'Школа', login: 'admin' },
-  { id: 'teacher', label: 'Учитель', login: 'matematik' },
-  { id: 'student', label: 'Ученик', login: 'student1' },
-  { id: 'parent', label: 'Родитель', login: 'parent1' },
+  { id: 'admin', label: 'Школа', login: 'admin', emoji: '🏫', color: '#1c7ed6' },
+  { id: 'teacher', label: 'Учитель', login: 'matematik', emoji: '👩‍🏫', color: '#7048e8' },
+  { id: 'student', label: 'Ученик', login: 'student1', emoji: '🎒', color: '#0ca678' },
+  { id: 'parent', label: 'Родитель', login: 'parent1', emoji: '👨‍👩‍👧', color: '#e8590c' },
 ];
 
 // Сотрудники: у каждого свой кабинет (демо «9 доменов — 1 ядро»)
 const STAFF_TABS = [
-  { id: 'accountant', label: 'Бухгалтер', login: 'accountant1' },
-  { id: 'psychologist', label: 'Психолог', login: 'psychologist1' },
-  { id: 'doctor', label: 'Врач', login: 'doctor1' },
-  { id: 'hr', label: 'HR', login: 'hr1' },
-  { id: 'librarian', label: 'Библиотека', login: 'librarian1' },
-  { id: 'cook', label: 'Столовая', login: 'cook1' },
-  { id: 'zavhoz', label: 'АХЧ', login: 'zavhoz1' },
+  { id: 'accountant', label: 'Бухгалтер', login: 'accountant1', emoji: '💰', color: '#e8590c' },
+  { id: 'psychologist', label: 'Психолог', login: 'psychologist1', emoji: '🧠', color: '#9c36b5' },
+  { id: 'doctor', label: 'Врач', login: 'doctor1', emoji: '🩺', color: '#e03131' },
+  { id: 'hr', label: 'HR', login: 'hr1', emoji: '📋', color: '#2f9e44' },
+  { id: 'librarian', label: 'Библиотека', login: 'librarian1', emoji: '📚', color: '#1971c2' },
+  { id: 'cook', label: 'Столовая', login: 'cook1', emoji: '🍲', color: '#f08c00' },
+  { id: 'zavhoz', label: 'АХЧ', login: 'zavhoz1', emoji: '🔧', color: '#495057' },
 ];
 
 const ALL_TABS = [...ROLE_TABS, ...STAFF_TABS];
@@ -150,49 +150,66 @@ export default function LoginPage() {
             Цифровой кабинет для директоров, учителей, учеников и родителей школы.
           </Text>
 
-          {/* Role tabs */}
-          <Group gap={6} mt={32} p={4} style={{ background: '#f3f5f8', borderRadius: 10, width: 'fit-content' }}>
-            {ROLE_TABS.map((t) => (
-              <Button
-                key={t.id}
-                variant="subtle"
-                size="xs"
-                onClick={() => selectRole(t.id)}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: 7,
-                  fontWeight: 600,
-                  background: activeRole === t.id ? 'white' : 'transparent',
-                  color: activeRole === t.id ? '#0f172a' : '#6b7280',
-                  boxShadow: activeRole === t.id ? '0 1px 3px rgba(15,23,42,0.06)' : 'none',
-                }}
-              >
-                {t.label}
-              </Button>
-            ))}
+          {/* Выбор роли: основные — карточки с иконками */}
+          <Group gap={10} mt={32} wrap="wrap" style={{ maxWidth: 480 }}>
+            {ROLE_TABS.map((t) => {
+              const active = activeRole === t.id;
+              return (
+                <Button
+                  key={t.id}
+                  variant="subtle"
+                  onClick={() => selectRole(t.id)}
+                  h="auto"
+                  p={0}
+                  style={{
+                    flex: '1 1 100px',
+                    borderRadius: 14,
+                    border: active ? `2px solid ${t.color}` : '1.5px solid #e3e7ee',
+                    background: active ? `${t.color}10` : 'white',
+                    boxShadow: active ? `0 6px 16px ${t.color}26` : '0 1px 2px rgba(15,23,42,0.04)',
+                    transition: 'all 130ms ease',
+                  }}
+                >
+                  <Stack gap={2} align="center" py={12} px={8} w="100%">
+                    <Text style={{ fontSize: 24, lineHeight: 1 }}>{t.emoji}</Text>
+                    <Text size="sm" fw={700} c={active ? t.color : '#3b4252'}>
+                      {t.label}
+                    </Text>
+                  </Stack>
+                </Button>
+              );
+            })}
           </Group>
 
-          {/* Staff tabs: у каждого сотрудника свой кабинет */}
-          <Group gap={4} mt={8} p={4} style={{ background: '#f3f5f8', borderRadius: 10, width: 'fit-content', maxWidth: 460 }}>
-            {STAFF_TABS.map((t) => (
-              <Button
-                key={t.id}
-                variant="subtle"
-                size="compact-xs"
-                onClick={() => selectRole(t.id)}
-                style={{
-                  padding: '5px 10px',
-                  borderRadius: 6,
-                  fontWeight: 600,
-                  fontSize: 12,
-                  background: activeRole === t.id ? 'white' : 'transparent',
-                  color: activeRole === t.id ? '#0f172a' : '#6b7280',
-                  boxShadow: activeRole === t.id ? '0 1px 3px rgba(15,23,42,0.06)' : 'none',
-                }}
-              >
-                {t.label}
-              </Button>
-            ))}
+          {/* Сотрудники: у каждого свой кабинет */}
+          <Text size="xs" fw={600} c="#9aa3b2" mt={16} mb={6} style={{ letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            Кабинеты сотрудников
+          </Text>
+          <Group gap={6} wrap="wrap" style={{ maxWidth: 480 }}>
+            {STAFF_TABS.map((t) => {
+              const active = activeRole === t.id;
+              return (
+                <Button
+                  key={t.id}
+                  variant="subtle"
+                  size="compact-sm"
+                  onClick={() => selectRole(t.id)}
+                  leftSection={<span style={{ fontSize: 15 }}>{t.emoji}</span>}
+                  style={{
+                    borderRadius: 99,
+                    padding: '6px 13px',
+                    fontWeight: 600,
+                    fontSize: 12.5,
+                    border: active ? `1.5px solid ${t.color}` : '1.5px solid #e3e7ee',
+                    background: active ? `${t.color}12` : 'white',
+                    color: active ? t.color : '#5b6472',
+                    transition: 'all 130ms ease',
+                  }}
+                >
+                  {t.label}
+                </Button>
+              );
+            })}
           </Group>
 
           {/* Form fields */}
