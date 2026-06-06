@@ -26,7 +26,8 @@ import {
   TextInput,
   Title,
 } from '@mantine/core';
-import { IconPlus, IconTrash } from '@tabler/icons-react';
+import { notifications } from '@mantine/notifications';
+import { IconPlus, IconSearch, IconTrash } from '@tabler/icons-react';
 
 const SURFACE = '#ffffff';
 const SURFACE_BORDER = '#e6e9ee';
@@ -97,6 +98,10 @@ export interface ResourcePageProps {
   lookups?: ResourceLookup[];
   /** трансформация payload перед POST */
   transformPayload?: (raw: Record<string, unknown>) => Record<string, unknown>;
+  /** клиентский поиск по строкам (значения + резолвнутые справочники) */
+  searchable?: boolean;
+  /** доп. действия в конце строки (например, «изменить») */
+  rowActions?: (row: ResourceRow, reload: () => void) => React.ReactNode;
 }
 
 export function ResourcePage({
@@ -112,8 +117,11 @@ export function ResourcePage({
   emptyText = 'Пока нет записей',
   lookups,
   transformPayload,
+  searchable = false,
+  rowActions,
 }: ResourcePageProps) {
   const [rows, setRows] = useState<ResourceRow[]>([]);
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -159,8 +167,9 @@ export function ResourcePage({
       const res = await fetch(`${endpoint}${qs}`);
       const json = await res.json();
       if (json.success) setRows(json.data);
+      else notifications.show({ color: 'red', title: 'Ошибка', message: json.error?.message ?? 'Не удалось загрузить данные' });
     } catch {
-      /* ignore */
+      notifications.show({ color: 'red', title: 'Ошибка сети', message: 'Не удалось загрузить данные' });
     } finally {
       setLoading(false);
     }
@@ -238,14 +247,35 @@ export function ResourcePage({
       const res = await fetch(`${endpoint}?id=${id}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) load();
+      else notifications.show({ color: 'red', title: 'Ошибка', message: json.error?.message ?? 'Не удалось удалить запись' });
     } catch {
-      /* ignore */
+      notifications.show({ color: 'red', title: 'Ошибка сети', message: 'Запись не удалена' });
     }
   }
 
   function setField(name: string, value: unknown) {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
+
+  // Клиентский поиск: по значениям строки + резолвнутым подписям справочников
+  const visibleRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!searchable || !q) return rows;
+    return rows.filter((row) => {
+      for (const [k, v] of Object.entries(row)) {
+        if (v == null) continue;
+        if (typeof v === 'string' || typeof v === 'number') {
+          if (String(v).toLowerCase().includes(q)) return true;
+          // id-поле — пробуем найти подпись в справочниках
+          for (const m of Object.values(maps)) {
+            const label = m[String(v)];
+            if (label && label.toLowerCase().includes(q)) return true;
+          }
+        }
+      }
+      return false;
+    });
+  }, [rows, search, searchable, maps]);
 
   function renderField(f: ResourceField) {
     const val = form[f.name];
@@ -299,11 +329,23 @@ export function ResourcePage({
           <Title order={3} c="var(--mantine-color-text)">{title}</Title>
           <Badge variant="light" color="gray" radius="sm">{rows.length}</Badge>
         </Group>
-        {canCreate && fields.length > 0 && (
-          <Button leftSection={<IconPlus size={16} />} onClick={openModal} color="eruditBlue">
-            {createLabel}
-          </Button>
-        )}
+        <Group gap="sm">
+          {searchable && (
+            <TextInput
+              size="xs"
+              placeholder="Поиск"
+              leftSection={<IconSearch size={14} />}
+              value={search}
+              onChange={(e) => setSearch(e.currentTarget.value)}
+              w={200}
+            />
+          )}
+          {canCreate && fields.length > 0 && (
+            <Button leftSection={<IconPlus size={16} />} onClick={openModal} color="eruditBlue">
+              {createLabel}
+            </Button>
+          )}
+        </Group>
       </Group>
 
       <Paper style={{ background: SURFACE, border: `1px solid ${SURFACE_BORDER}` }} radius="sm">
@@ -311,6 +353,8 @@ export function ResourcePage({
           <Group justify="center" p="xl"><Loader color="blue" /></Group>
         ) : rows.length === 0 ? (
           <Text c={TEXT_SEC} ta="center" p="xl">{emptyText}</Text>
+        ) : visibleRows.length === 0 ? (
+          <Text c={TEXT_SEC} ta="center" p="xl">Ничего не найдено по запросу.</Text>
         ) : (
           <ScrollArea>
             <Table highlightOnHover style={{ minWidth: 600 }}>
@@ -319,22 +363,27 @@ export function ResourcePage({
                   {columns.map((c) => (
                     <Table.Th key={c.key} style={{ color: TEXT_SEC, fontSize: 12, width: c.width }}>{c.label}</Table.Th>
                   ))}
-                  {canDelete && <Table.Th style={{ width: 48 }} />}
+                  {(canDelete || rowActions) && <Table.Th style={{ width: 48 }} />}
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {rows.map((row) => (
+                {visibleRows.map((row) => (
                   <Table.Tr key={row.id}>
                     {columns.map((c) => (
                       <Table.Td key={c.key} style={{ fontSize: 13 }}>
                         {c.render ? c.render(row, maps) : String((row as Record<string, unknown>)[c.key] ?? '—')}
                       </Table.Td>
                     ))}
-                    {canDelete && (
+                    {(canDelete || rowActions) && (
                       <Table.Td>
-                        <ActionIcon variant="subtle" color="red" onClick={() => remove(row.id)}>
-                          <IconTrash size={16} />
-                        </ActionIcon>
+                        <Group gap={4} wrap="nowrap">
+                          {rowActions?.(row, load)}
+                          {canDelete && (
+                            <ActionIcon variant="subtle" color="red" onClick={() => remove(row.id)}>
+                              <IconTrash size={16} />
+                            </ActionIcon>
+                          )}
+                        </Group>
                       </Table.Td>
                     )}
                   </Table.Tr>

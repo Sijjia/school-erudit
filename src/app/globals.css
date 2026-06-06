@@ -147,3 +147,21 @@ html { scroll-behavior: smooth; }
 
 .landing-dark { background: #211c17; }
 .landing-rule { border: none; border-top: 1px solid #ece3d6; }
+
+/* ── Печать (журнал/дневник): только контент, без chrome ── */
+@media print {
+  .mantine-AppShell-navbar,
+  .mantine-AppShell-header,
+  .mantine-Notifications-root,
+  [data-assistant-widget],
+  button,
+  .no-print {
+    display: none !important;
+  }
+  .mantine-AppShell-main {
+    padding: 0 !important;
+  }
+  body {
+    background: #fff !important;
+  }
+}

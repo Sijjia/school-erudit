@@ -12,8 +12,9 @@ import {
   ActionIcon, Avatar, Badge, Button, Group, Loader, Menu, Modal, NumberInput,
   Paper, ScrollArea, Select, Stack, Table, Text, TextInput, Title, Tooltip,
 } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import {
-  IconBook2, IconCalendarCheck, IconCheck, IconDots, IconHistory, IconPencil, IconPlus, IconTrash,
+  IconBook2, IconCalendarCheck, IconCheck, IconDots, IconHistory, IconPencil, IconPlus, IconPrinter, IconSearch, IconTrash,
 } from '@tabler/icons-react';
 import { RoleGate } from '@/shared/components/auth/RoleGate';
 import { useRole } from '@/shared/hooks/useRole';
@@ -61,6 +62,11 @@ function todayISO() {
 }
 const fmtDM = (iso: string) => new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
 
+/** Красный toast об ошибке сохранения (журнал раньше молчал — теперь говорит). */
+function toastError(message: string) {
+  notifications.show({ color: 'red', title: 'Ошибка', message });
+}
+
 function Journal() {
   const { role } = useRole();
   const canDelete = role === 'zavuch' || role === 'super_admin' || role === 'analyst';
@@ -94,6 +100,9 @@ function Journal() {
   const [finalsOpen, setFinalsOpen] = useState(false);
   const [finalDrafts, setFinalDrafts] = useState<Record<string, number>>({});
   const [finalsSaving, setFinalsSaving] = useState(false);
+
+  // поиск ученика в таблице (клиентский фильтр)
+  const [studentQuery, setStudentQuery] = useState('');
 
   // заметки
   const [noteFor, setNoteFor] = useState<Student | null>(null);
@@ -147,7 +156,7 @@ function Journal() {
         fetch(`/api/v1/incidents-summary?classId=${selected.classId}`),
       ]);
       const [s, g, a, n] = await Promise.all([sRes.json(), gRes.json(), aRes.json(), nRes.json()]);
-      if (s.success) setStudents(s.data);
+      if (s.success) setStudents([...s.data].sort((x: Student, y: Student) => `${x.lastName} ${x.firstName}`.localeCompare(`${y.lastName} ${y.firstName}`, 'ru')));
       if (g.success) setGrades(g.data);
       if (a.success) setAssignments(a.data);
       if (n.success) setNoteCounts(n.data);
@@ -263,7 +272,11 @@ function Journal() {
           }
         }
         setEditCell(null);
+      } else {
+        toastError(json.error?.message ?? 'Не удалось сохранить балл');
       }
+    } catch {
+      toastError('Сеть недоступна — балл не сохранён');
     } finally {
       setCellSaving(false);
     }
@@ -289,8 +302,9 @@ function Journal() {
     if (!asgForm.title.trim() || !selected || !teacherId || !periodId) return;
     setAsgSaving(true);
     try {
+      let res: Response;
       if (asgModal?.mode === 'edit' && asgModal.asg) {
-        await fetch(`/api/v1/assignments/${asgModal.asg.id}`, {
+        res = await fetch(`/api/v1/assignments/${asgModal.asg.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -302,7 +316,7 @@ function Journal() {
           }),
         });
       } else {
-        await fetch('/api/v1/assignments', {
+        res = await fetch('/api/v1/assignments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -318,8 +332,15 @@ function Journal() {
           }),
         });
       }
+      const json = await res.json();
+      if (!json.success) {
+        toastError(json.error?.message ?? 'Не удалось сохранить назначение');
+        return;
+      }
       setAsgModal(null);
       await loadGrid();
+    } catch {
+      toastError('Сеть недоступна — назначение не сохранено');
     } finally {
       setAsgSaving(false);
     }
@@ -327,7 +348,13 @@ function Journal() {
 
   const deleteAsg = async (asg: Assignment) => {
     if (!confirm(`Удалить назначение «${asg.title}»? Оценки останутся в «Прочих».`)) return;
-    await fetch(`/api/v1/assignments/${asg.id}`, { method: 'DELETE' });
+    try {
+      const res = await fetch(`/api/v1/assignments/${asg.id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (!json.success) toastError(json.error?.message ?? 'Не удалось удалить назначение');
+    } catch {
+      toastError('Сеть недоступна — назначение не удалено');
+    }
     await loadGrid();
   };
 
@@ -347,8 +374,9 @@ function Journal() {
     if (!selected || !teacherId || !periodId || !finalCategory) return;
     setFinalsSaving(true);
     try {
+      let failed = 0;
       for (const [studentId, value] of Object.entries(finalDrafts)) {
-        await fetch('/api/v1/grading', {
+        const res = await fetch('/api/v1/grading', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -356,9 +384,14 @@ function Journal() {
             teacherId, periodId, value, scale: 'FIVE', date: todayISO(),
           }),
         });
+        const json = await res.json().catch(() => ({ success: false }));
+        if (!json.success) failed += 1;
       }
+      if (failed > 0) toastError(`Не сохранилось итоговых: ${failed}`);
       setFinalsOpen(false);
       await reloadGrades();
+    } catch {
+      toastError('Сеть недоступна — итоговые не сохранены');
     } finally {
       setFinalsSaving(false);
     }
@@ -384,6 +417,11 @@ function Journal() {
           <Button component={Link} href="/journal/attendance" variant="light" leftSection={<IconCalendarCheck size={16} />}>
             Посещаемость
           </Button>
+          {selected && (
+            <Button variant="light" color="gray" leftSection={<IconPrinter size={16} />} onClick={() => window.print()}>
+              Печать
+            </Button>
+          )}
           <Button component={Link} href="/journal/classic" variant="subtle" size="xs" c="dimmed">
             классический вид
           </Button>
@@ -394,6 +432,16 @@ function Journal() {
         <Group align="flex-end" gap="sm" wrap="wrap">
           <Select label="Класс и предмет" data={pairOptions} value={pairKey} onChange={setPairKey} searchable w={260} placeholder="Выберите" />
           <Select label="Период" data={periodOptions} value={periodId} onChange={setPeriodId} w={150} />
+          {selected && (
+            <TextInput
+              label="Ученик"
+              placeholder="Поиск по имени"
+              leftSection={<IconSearch size={14} />}
+              value={studentQuery}
+              onChange={(e) => setStudentQuery(e.currentTarget.value)}
+              w={180}
+            />
+          )}
           {selected && teacherId && (
             <>
               <Button leftSection={<IconPlus size={16} />} onClick={openAsgCreate}>Новое назначение</Button>
@@ -451,7 +499,7 @@ function Journal() {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {students.map((st) => {
+                {students.filter((st) => !studentQuery.trim() || `${st.lastName} ${st.firstName}`.toLowerCase().includes(studentQuery.trim().toLowerCase())).map((st) => {
                   const pct = percentByStudent[st.id];
                   const five = fiveByStudent[st.id];
                   const fin = finalByStudent[st.id];

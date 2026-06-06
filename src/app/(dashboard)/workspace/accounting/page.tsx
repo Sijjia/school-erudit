@@ -1,14 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Badge, Button, Group, Modal, NumberInput, Select, Stack, Tabs, Text, TextInput } from '@mantine/core';
+import { ActionIcon, Badge, Button, Group, Modal, NumberInput, Select, Stack, Tabs, Text, TextInput, Tooltip } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconCash, IconReceipt, IconArrowDownRight, IconBellRinging, IconCreditCardPay } from '@tabler/icons-react';
+import { IconCash, IconReceipt, IconArrowDownRight, IconBellRinging, IconCreditCardPay, IconPencil, IconPrinter } from '@tabler/icons-react';
 import { RoleGate } from '@/shared/components/auth/RoleGate';
 import { ResourcePage } from '@/shared/components/ui/ResourcePage';
 import { fmtDate, fmtMoney, studentField, studentLookup } from '@/shared/components/ui/resource-helpers';
 import { computePenalty } from '@/shared/lib/finance/penalty';
 import { INV_STATUS, INV_COLOR, invoiceStatusLabel } from '@/shared/lib/finance/invoice-status';
+import { printInvoice } from '@/shared/lib/finance/print-invoice';
 
 /** Пеня по строке счёта (payments приходят из API). */
 function rowPenalty(r: Record<string, unknown>): { penalty: number; overdueDays: number } {
@@ -128,10 +129,92 @@ function AcceptPaymentModal({ opened, onClose, onSuccess }: { opened: boolean; o
   );
 }
 
+interface InvoiceRow {
+  id: string; studentId: string; title: string; period: string | null;
+  amount: number; status: string; dueDate: string | null; createdAt?: string | null;
+  payments?: Array<{ amount: number }>;
+}
+
+/** Модал редактирования счёта (PUT /fee-invoices/[id]). */
+function EditInvoiceModal({ invoice, onClose, onSuccess }: { invoice: InvoiceRow | null; onClose: () => void; onSuccess: () => void }) {
+  const [form, setForm] = useState({ title: '', period: '', amount: 0, status: 'pending', dueDate: '' });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (invoice) {
+      setForm({
+        title: invoice.title,
+        period: invoice.period ?? '',
+        amount: invoice.amount,
+        status: invoice.status,
+        dueDate: invoice.dueDate ? invoice.dueDate.slice(0, 10) : '',
+      });
+    }
+  }, [invoice]);
+
+  async function submit() {
+    if (!invoice || !form.title.trim() || form.amount <= 0) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/v1/fee-invoices/${invoice.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: form.title.trim(),
+          period: form.period.trim() || null,
+          amount: Math.round(form.amount),
+          status: form.status,
+          dueDate: form.dueDate ? new Date(form.dueDate).toISOString() : null,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error?.message ?? 'Ошибка');
+      notifications.show({ color: 'green', title: 'Счёт обновлён', message: form.title });
+      onSuccess();
+      onClose();
+    } catch (e) {
+      notifications.show({ color: 'red', title: 'Ошибка', message: e instanceof Error ? e.message : 'Не удалось обновить счёт' });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal opened={Boolean(invoice)} onClose={onClose} title="Изменить счёт" radius="lg">
+      <Stack gap="sm">
+        <TextInput label="Назначение" required value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.currentTarget.value }))} />
+        <TextInput label="Период" value={form.period} onChange={(e) => setForm((f) => ({ ...f, period: e.currentTarget.value }))} />
+        <NumberInput label="Сумма (сом)" required min={1} value={form.amount} onChange={(v) => setForm((f) => ({ ...f, amount: Number(v) || 0 }))} thousandSeparator=" " />
+        <Select label="Статус" data={INV_STATUS} value={form.status} onChange={(v) => setForm((f) => ({ ...f, status: v ?? f.status }))} />
+        <TextInput label="Срок оплаты" type="date" value={form.dueDate} onChange={(e) => setForm((f) => ({ ...f, dueDate: e.currentTarget.value }))} />
+        <Group justify="flex-end" mt="xs">
+          <Button variant="default" onClick={onClose}>Отмена</Button>
+          <Button loading={saving} onClick={submit}>Сохранить</Button>
+        </Group>
+      </Stack>
+    </Modal>
+  );
+}
+
 export default function AccountingPage() {
   const [payOpen, setPayOpen] = useState(false);
-  const [invKey, setInvKey] = useState(0); // remount ResourcePage после платежа
+  const [invKey, setInvKey] = useState(0); // remount ResourcePage после платежа/правки
   const [sendingReminders, setSendingReminders] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [editInv, setEditInv] = useState<InvoiceRow | null>(null);
+  const [studentMap, setStudentMap] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetch('/api/v1/students')
+      .then((r) => r.json())
+      .then((j) => {
+        if (!j.success) return;
+        const m: Record<string, string> = {};
+        for (const s of j.data) m[s.id] = `${s.lastName} ${s.firstName}`;
+        setStudentMap(m);
+      })
+      .catch(() => {});
+  }, []);
 
   async function sendReminders() {
     setSendingReminders(true);
@@ -160,22 +243,57 @@ export default function AccountingPage() {
         </Tabs.List>
 
         <Tabs.Panel value="invoices">
-          <Group justify="flex-end" mb="sm">
-            <Button variant="light" color="orange" leftSection={<IconBellRinging size={16} />} loading={sendingReminders} onClick={sendReminders}>
-              Отправить напоминания
-            </Button>
-            <Button color="green" leftSection={<IconCreditCardPay size={16} />} onClick={() => setPayOpen(true)}>
-              Принять оплату
-            </Button>
+          <Group justify="space-between" mb="sm" wrap="wrap">
+            <Select
+              size="xs"
+              w={170}
+              placeholder="Все статусы"
+              clearable
+              data={INV_STATUS}
+              value={statusFilter}
+              onChange={setStatusFilter}
+            />
+            <Group gap="sm">
+              <Button variant="light" color="orange" leftSection={<IconBellRinging size={16} />} loading={sendingReminders} onClick={sendReminders}>
+                Отправить напоминания
+              </Button>
+              <Button color="green" leftSection={<IconCreditCardPay size={16} />} onClick={() => setPayOpen(true)}>
+                Принять оплату
+              </Button>
+            </Group>
           </Group>
           <AcceptPaymentModal opened={payOpen} onClose={() => setPayOpen(false)} onSuccess={() => setInvKey((k) => k + 1)} />
+          <EditInvoiceModal invoice={editInv} onClose={() => setEditInv(null)} onSuccess={() => setInvKey((k) => k + 1)} />
           <ResourcePage
-            key={invKey}
+            key={`${invKey}|${statusFilter ?? 'all'}`}
             title="Счета на оплату"
             icon={<IconCash size={22} color="#2f9e44" />}
             endpoint="/api/v1/fee-invoices"
+            query={statusFilter ? { status: statusFilter } : undefined}
             createLabel="Выставить счёт"
             canDelete
+            searchable
+            rowActions={(row) => (
+              <>
+                <Tooltip label="Изменить">
+                  <ActionIcon variant="subtle" color="blue" onClick={() => setEditInv(row as unknown as InvoiceRow)}>
+                    <IconPencil size={16} />
+                  </ActionIcon>
+                </Tooltip>
+                <Tooltip label="Печать счёта">
+                  <ActionIcon
+                    variant="subtle"
+                    color="gray"
+                    onClick={() => {
+                      const inv = row as unknown as InvoiceRow;
+                      printInvoice(inv, studentMap[inv.studentId] ?? '—');
+                    }}
+                  >
+                    <IconPrinter size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              </>
+            )}
             lookups={[studentLookup]}
             columns={[
               { key: 'studentId', label: 'Ученик', render: (r, m) => m.students?.[String(r.studentId)] ?? '—' },
