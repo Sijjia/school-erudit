@@ -614,6 +614,47 @@ async function main() {
     console.log(`  + notes: ${noteCount}`)
   }
 
+  // 17. Демо-долг у ребёнка parent1: просроченный счёт (пеня) + частично оплаченный.
+  //     Нужен для показа таба «Оплата» в дневнике, должников в /finance и напоминаний.
+  const parent1 = await prisma.user.findUnique({
+    where: { login: 'parent1' },
+    select: { parent: { select: { children: { select: { studentId: true }, take: 1 } } } },
+  })
+  const debtStudentId = parent1?.parent?.children[0]?.studentId
+  if (debtStudentId) {
+    const overdueMarker = await prisma.feeInvoice.findFirst({
+      where: { studentId: debtStudentId, title: 'Обучение, демо-долг' },
+    })
+    if (!overdueMarker) {
+      // просроченный на 30 дней — пеня уже капает
+      await prisma.feeInvoice.create({
+        data: {
+          studentId: debtStudentId,
+          title: 'Обучение, демо-долг',
+          period: 'прошлый месяц',
+          amount: 8000,
+          status: 'pending',
+          dueDate: new Date(Date.now() - 30 * 864e5),
+        },
+      })
+      // частично оплаченный — текущий месяц
+      const partial = await prisma.feeInvoice.create({
+        data: {
+          studentId: debtStudentId,
+          title: 'Обучение, текущий месяц',
+          period: 'текущий месяц',
+          amount: 8000,
+          status: 'partial',
+          dueDate: new Date(Date.now() + 5 * 864e5),
+        },
+      })
+      await prisma.payment.create({
+        data: { invoiceId: partial.id, amount: 3000, method: 'банк', note: 'Частичная оплата (демо)' },
+      })
+      console.log('  + демо-долг parent1: просроченный + частичный счёт')
+    }
+  }
+
   console.log('--- seed-demo: готово ---')
 }
 
