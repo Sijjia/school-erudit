@@ -38,7 +38,9 @@ const ADMIN_SECRETARY: Role[] = ['super_admin', 'analyst', 'zavuch', 'secretary'
 // «Общественные» модули — видны всем, КРОМЕ учителя/куратора (чтобы не засорять их меню)
 const NON_TEACHING_AUTH: Role[] = ['super_admin', 'analyst', 'zavuch', 'secretary', 'specialist', 'student', 'parent']
 // Узкие роли сотрудников: у каждого свой кабинет + общие коммуникации
-const NEW_STAFF: Role[] = ['accountant', 'psychologist', 'doctor', 'hr', 'librarian', 'cook', 'zavhoz']
+const NEW_STAFF: Role[] = ['accountant', 'psychologist', 'doctor', 'hr', 'librarian', 'cook', 'zavhoz', 'senior_psychologist', 'safeguarding_lead', 'call_center']
+// Психологическая служба (eSPSMS): кто ведёт кейсы
+const PSY_STAFF: Role[] = ['psychologist', 'senior_psychologist', 'specialist', 'super_admin']
 
 /**
  * ── Active pages only ──
@@ -62,6 +64,10 @@ export const SIDEBAR_NAV: NavRoute[] = [
   // Ядро экосистемы: граф связей + CRM-воронка приёмной + база знаний
   { href: '/core', label: 'Граф ядра', roles: ADMIN_SECRETARY },
   { href: '/admission', label: 'Приёмная (CRM)', roles: ADMIN_SECRETARY },
+  { href: '/reserve', label: 'Очередь в классы', roles: ADMIN_SECRETARY },
+  { href: '/operations/transition', label: 'Перевод года', roles: ADMIN_AND_VICE },
+  { href: '/withdrawals', label: 'Отчисления', roles: ADMIN_SECRETARY },
+  { href: '/import-export', label: 'Импорт / Экспорт', roles: ADMIN_SECRETARY },
   { href: '/knowledge', label: 'База знаний', roles: ADMIN_SECRETARY },
   { href: '/classes', label: 'Классы', roles: ADMIN_SECRETARY },
   { href: '/academic-periods', label: 'Учебные периоды', roles: ADMIN_AND_VICE },
@@ -132,8 +138,15 @@ export const SIDEBAR_NAV: NavRoute[] = [
   { href: '/trips', label: 'Выезды', roles: NON_TEACHING_AUTH },
   // Администрирование
   { href: '/staff', label: 'Персонал', roles: [...ADMIN_SECRETARY, 'hr'] },
+  { href: '/hr', label: 'Кадры (HR)', roles: ['super_admin', 'analyst', 'zavuch', 'hr'] },
   { href: '/documents', label: 'Документы', roles: ['super_admin', 'analyst', 'zavuch', 'secretary', 'hr'] },
   { href: '/roles', label: 'Роли', roles: ['super_admin'] },
+  { href: '/branches', label: 'Филиалы', roles: ['super_admin', 'analyst'] },
+  // Психологическая служба (eSPSMS) — кейс-менеджмент психолога
+  { href: '/psychologist', label: 'Кабинет психолога', roles: PSY_STAFF },
+  { href: '/psychologist/methods', label: 'Конструктор методик', roles: ['senior_psychologist', 'super_admin'] },
+  { href: '/psychologist/overview', label: 'Психология: сводка', roles: ['super_admin', 'analyst', 'zavuch', 'senior_psychologist', 'safeguarding_lead'] },
+  { href: '/safeguarding', label: 'Координатор безопасности', roles: ['safeguarding_lead', 'zavuch', 'super_admin'] },
   // Workspace (специалисты)
   { href: '/workspace/speech', label: 'Логопед', roles: ['super_admin', 'analyst', 'zavuch', 'specialist', 'curator'] },
   { href: '/workspace/psychologist', label: 'Психолог', roles: ['super_admin', 'analyst', 'zavuch', 'specialist', 'curator', 'psychologist'] },
@@ -141,6 +154,8 @@ export const SIDEBAR_NAV: NavRoute[] = [
   { href: '/workspace/parents', label: 'Родители', roles: ['super_admin', 'analyst', 'zavuch', 'secretary', 'curator'] },
   // Хозчасть / бизнес
   { href: '/finance', label: 'Финансы', roles: ['super_admin', 'analyst', 'accountant'] },
+  { href: '/call-center', label: 'Колл-центр', roles: ['call_center', 'super_admin', 'analyst', 'zavuch', 'accountant'] },
+  { href: '/finance/journal', label: 'Журнал оплат', roles: ['super_admin', 'analyst', 'zavuch', 'accountant'] },
   { href: '/workspace/accounting', label: 'Бухгалтерия', roles: [...ADMIN_AND_VICE, 'accountant'] },
   { href: '/workspace/kitchen', label: 'Кухня', roles: ['super_admin', 'analyst', 'zavuch', 'secretary', 'cook'] },
   { href: '/workspace/maintenance', label: 'АХЧ', roles: ['super_admin', 'analyst', 'zavuch', 'secretary', 'zavhoz'] },

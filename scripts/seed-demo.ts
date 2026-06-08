@@ -20,6 +20,11 @@ async function main() {
     { login: 'librarian1', role: 'librarian', email: 'librarian@erudit.kg' },
     { login: 'cook1', role: 'cook', email: 'cook@erudit.kg' },
     { login: 'zavhoz1', role: 'zavhoz', email: 'zavhoz@erudit.kg' },
+    // eSPSMS: психологическая служба
+    { login: 'senior_psy', role: 'senior_psychologist', email: 'senior.psy@erudit.kg' },
+    { login: 'safeguard', role: 'safeguarding_lead', email: 'safeguard@erudit.kg' },
+    // финансы
+    { login: 'callcenter1', role: 'call_center', email: 'callcenter@erudit.kg' },
   ]
   const pwHash = await hash('erudit2025', 10)
   for (const u of missingRoles) {
@@ -652,6 +657,39 @@ async function main() {
         data: { invoiceId: partial.id, amount: 3000, method: 'банк', note: 'Частичная оплата (демо)' },
       })
       console.log('  + демо-долг parent1: просроченный + частичный счёт')
+    }
+  }
+
+  // 18. eSPSMS: демо психологической службы (кейсы, сессии, методика+версия, замеры, алерт)
+  const psyOwner = await prisma.user.findFirst({ where: { role: 'psychologist' } })
+  const seniorPsy = await prisma.user.findFirst({ where: { role: 'senior_psychologist' } })
+  const psyCaseCount = await prisma.psyCase.count()
+  if (psyOwner && psyCaseCount === 0) {
+    const psyStudents = await prisma.student.findMany({ take: 4, select: { id: true } })
+    if (psyStudents.length >= 3) {
+      const DAYP = 864e5
+      let tplV2Id: string | null = null
+      if (seniorPsy) {
+        const v1 = await prisma.psyDiagnosticTemplate.create({ data: { name: 'Шкала тревожности', version: 1, authorId: seniorPsy.id, schema: { metric: 'тревожность', scaleMin: 1, scaleMax: 5, questions: [] }, isActive: false } })
+        const v2 = await prisma.psyDiagnosticTemplate.create({ data: { name: 'Шкала тревожности', version: 2, parentTemplateId: v1.id, authorId: seniorPsy.id, schema: { metric: 'тревожность', scaleMin: 1, scaleMax: 10, questions: [] }, mappingRule: { op: 'divide', factor: 2 }, isActive: true } })
+        tplV2Id = v2.id
+      }
+      // кейс 1: зелёный, динамика улучшения (склейка версий через mapping)
+      const c1 = await prisma.psyCase.create({ data: { studentId: psyStudents[0].id, ownerId: psyOwner.id, title: 'Адаптация', reason: 'Трудности адаптации в новом классе', riskLevel: 'green', status: 'in_progress' } })
+      await prisma.psySession.create({ data: { caseId: c1.id, authorId: psyOwner.id, type: 'primary_diagnosis', rawNote: 'Первичная встреча', dapData: 'Ребёнок замкнут, избегает контакта.', dapAssessment: 'Лёгкая тревожность периода адаптации.', dapPlan: 'Поддерживающие встречи раз в неделю.', isHumanVerified: true, verifiedAt: new Date() } })
+      await prisma.psySession.create({ data: { caseId: c1.id, authorId: psyOwner.id, type: 'planned', dapData: 'Стал активнее, появились друзья.', dapAssessment: 'Положительная динамика.', dapPlan: 'Продолжаем наблюдение.', isHumanVerified: true, verifiedAt: new Date() } })
+      await prisma.psyMeasurement.create({ data: { caseId: c1.id, metric: 'тревожность', value: 4, templateVersion: 1, date: new Date(Date.now() - 21 * DAYP) } })
+      if (tplV2Id) {
+        await prisma.psyMeasurement.create({ data: { caseId: c1.id, metric: 'тревожность', value: 6, templateId: tplV2Id, templateVersion: 2, date: new Date(Date.now() - 14 * DAYP) } })
+        await prisma.psyMeasurement.create({ data: { caseId: c1.id, metric: 'тревожность', value: 4, templateId: tplV2Id, templateVersion: 2, date: new Date(Date.now() - 7 * DAYP) } })
+      }
+      // кейс 2: жёлтый
+      await prisma.psyCase.create({ data: { studentId: psyStudents[1].id, ownerId: psyOwner.id, title: 'Конфликты со сверстниками', reason: 'Частые конфликты на переменах', riskLevel: 'yellow', status: 'in_progress' } })
+      // кейс 3: красный + safeguarding-алерт
+      const redReason = 'Подозрение на жестокое обращение в семье. Требуется немедленное реагирование.'
+      const c3 = await prisma.psyCase.create({ data: { studentId: psyStudents[2].id, ownerId: psyOwner.id, title: 'Кризисная ситуация', reason: 'Срочное обращение классного руководителя', riskLevel: 'red', riskJustification: redReason, status: 'in_progress' } })
+      await prisma.psyAlert.create({ data: { caseId: c3.id, reason: redReason, status: 'open' } })
+      console.log('  + eSPSMS demo: 3 кейса, сессии, методика v1/v2, замеры, 1 safeguarding-алерт')
     }
   }
 

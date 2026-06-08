@@ -7,6 +7,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============ ФИЛИАЛЫ (multi-branch) ============
+// Школа Эмира многофилиальная. branchId проставляется сущностям; скоупинг —
+// server-side через branch-scope.ts. super_admin/analyst видят все филиалы.
+model Branch {
+  id         String   @id @default(cuid())
+  name       String
+  address    String?
+  requisites Json? // ИНН, расчётные счета, реквизиты для договоров
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+}
+
 // ============ AUTH & ROLES ============
 
 model User {
@@ -17,6 +29,7 @@ model User {
   role      Role
   starLevel Int      @default(1)
   isActive  Boolean  @default(true)
+  branchId  String? // домашний филиал сотрудника (null = все, для super_admin/analyst)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -62,6 +75,9 @@ enum Role {
   librarian // библиотекарь
   cook // повар/столовая
   zavhoz // завхоз/АХЧ
+  senior_psychologist // старший психолог: конструктор методик + надзор/эскалация (eSPSMS)
+  safeguarding_lead // координатор безопасности: слепые экстренные уведомления (eSPSMS)
+  call_center // колл-центр: обзвон задолжников, обещания оплаты
 }
 
 // ============ SCHOOL STRUCTURE ============
@@ -80,6 +96,8 @@ model Class {
   letter  String
   levelId String
   level   SchoolLevel @relation(fields: [levelId], references: [id])
+  branchId String? // филиал класса (multi-branch)
+  capacity Int? // мест в классе (для резерва/очереди, M-A)
 
   curatorId String?
   curator   Teacher? @relation("CuratorOf", fields: [curatorId], references: [id])
@@ -183,6 +201,7 @@ model Student {
   classId     String
   class       Class         @relation(fields: [classId], references: [id])
   enrolledAt  DateTime      @default(now())
+  branchId    String? // филиал ученика (multi-branch)
 
   groups      ClassGroup[]    @relation("StudentGroups")
   grades      Grade[]
@@ -199,6 +218,21 @@ enum StudentStatus {
   permanent
   conditional
   repeating
+  graduated // выпускник (после перевода года из последнего класса)
+  withdrawn // отчислен (ушёл из школы)
+}
+
+// Запись об отчислении ученика (причина, дата) — модуль «Отчисления».
+model Withdrawal {
+  id        String   @id @default(cuid())
+  studentId String
+  reason    String
+  date      DateTime @default(now())
+  branchId  String?
+  authorId  String
+  createdAt DateTime @default(now())
+
+  @@index([studentId])
 }
 
 model Parent {
@@ -220,6 +254,21 @@ model ParentStudent {
   relation  String
 
   @@id([parentId, studentId])
+}
+
+// Кросс-ролевые заметки по ученику для единого таймлайна («вся школа взаимосвязана»):
+// обещания колл-центра, статусы приёмки, произвольные пометки разных ролей.
+model StudentNote {
+  id        String   @id @default(cuid())
+  studentId String
+  authorId  String
+  role      String // роль автора на момент заметки
+  type      String // promise | call | note | status | finance | psych
+  text      String
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([studentId, createdAt])
 }
 
 // ============ SUBJECTS & WORKLOAD ============
@@ -751,6 +800,193 @@ model SpecialistProgress {
   @@index([studentId, metric])
 }
 
+// ============ ПСИХОЛОГИЧЕСКАЯ СЛУЖБА (eSPSMS) ============
+// Кейс-менеджмент психолога с DAP-сессиями, версионируемыми методиками,
+// уровнями риска и safeguarding. RLS — на уровне API (psy-scope.ts): психолог
+// видит только свои кейсы + где он принятый коллаборатор.
+
+enum PsyRisk {
+  green
+  yellow
+  red
+}
+
+enum PsyCaseStatus {
+  new
+  in_progress
+  paused
+  closed
+}
+
+enum PsySessionType {
+  primary_diagnosis
+  planned
+  emergency
+  parent_meeting
+  group
+}
+
+enum PsyCollabStatus {
+  pending
+  accepted
+  declined
+}
+
+// Исход курса (≈6 сессий): по итогам психолог фиксирует результат.
+enum PsyOutcome {
+  in_progress
+  improved // явные улучшения — кейс закрывается
+  repeat // нет улучшений — новый раунд с другими методиками
+  referred // вне полномочий — направление к узкому специалисту
+}
+
+model PsyCase {
+  id                String        @id @default(cuid())
+  studentId         String
+  ownerId           String        // user.id психолога-владельца
+  title             String
+  reason            String?       @db.VarChar(1000)
+  riskLevel         PsyRisk       @default(green)
+  riskJustification String?       @db.VarChar(1000) // обязателен при red (валидируется в API)
+  status            PsyCaseStatus @default(new)
+  summary           String? // итоговое заключение по курсу (6 сессий)
+  courseRound       Int           @default(1) // номер раунда из ~6 сессий
+  outcome           PsyOutcome    @default(in_progress)
+  isIntake          Boolean       @default(false) // PRE-тест при поступлении (из приёмки)
+  openedAt          DateTime      @default(now())
+  closedAt          DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  sessions      PsySession[]
+  collaborators PsyCaseCollaborator[]
+  tests         PsyTestResult[]
+  measurements  PsyMeasurement[]
+  alerts        PsyAlert[]
+  referrals     PsyReferral[]
+
+  @@index([studentId])
+  @@index([ownerId])
+  @@index([riskLevel])
+}
+
+// Направление к узкому специалисту (психиатр/логопед/др.) по итогам курса.
+model PsyReferral {
+  id        String   @id @default(cuid())
+  caseId    String
+  case      PsyCase  @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  target    String // psychiatrist | speech | medical | other
+  note      String?
+  createdBy String
+  createdAt DateTime @default(now())
+
+  @@index([caseId])
+}
+
+model PsyCaseCollaborator {
+  id          String          @id @default(cuid())
+  caseId      String
+  case        PsyCase         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  userId      String // приглашённый психолог
+  status      PsyCollabStatus @default(pending)
+  requestedAt DateTime        @default(now())
+  decidedAt   DateTime?
+
+  @@unique([caseId, userId])
+  @@index([userId])
+}
+
+model PsySession {
+  id              String         @id @default(cuid())
+  caseId          String
+  case            PsyCase        @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  authorId        String // user.id психолога, проводившего сессию
+  templateId      String? // использованная методика
+  date            DateTime       @default(now())
+  type            PsySessionType @default(planned)
+  rawNote         String? // оригинал психолога / транскрипт (НЕ перезаписывается AI)
+  dapData         String?
+  dapAssessment   String?
+  dapPlan         String?
+  qualNote        String? // качественное наблюдение «до/после» (стал спокойнее и т.п.)
+  aiDraft         Json? // версия от AI отдельно (anti-hallucination)
+  isHumanVerified Boolean        @default(false)
+  verifiedAt      DateTime?
+  audioKey        String? // ключ аудио в MinIO
+  createdAt       DateTime       @default(now())
+
+  @@index([caseId])
+  @@index([authorId])
+}
+
+model PsyDiagnosticTemplate {
+  id               String   @id @default(cuid())
+  name             String
+  version          Int      @default(1)
+  parentTemplateId String? // линейка версий (для версионирования)
+  authorId         String // senior_psychologist user.id
+  schema           Json // вопросы / шкалы 1..10 / симптомы / файловые поля
+  scaleConfig      Json?
+  mappingRule      Json? // правило пересчёта относительно прошлой версии (патч аналит. коллапса)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  @@index([parentTemplateId])
+  @@index([isActive])
+}
+
+model PsyTestResult {
+  id               String   @id @default(cuid())
+  caseId           String
+  case             PsyCase  @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  sessionId        String?
+  templateId       String
+  templateVersion  Int      @default(1)
+  rawScores        Json?
+  computedScales   Json?
+  imageKey         String? // проективный рисунок в MinIO (оригинал)
+  aiInterpretation String?
+  isHumanVerified  Boolean  @default(false)
+  date             DateTime @default(now())
+
+  @@index([caseId])
+}
+
+model PsyMeasurement {
+  id              String   @id @default(cuid())
+  caseId          String
+  case            PsyCase  @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  templateId      String?
+  templateVersion Int      @default(1)
+  metric          String
+  value           Int
+  date            DateTime @default(now())
+
+  @@index([caseId, metric])
+}
+
+// Safeguarding-алерт (UC-5): слепое экстренное уведомление координатору.
+// На устройстве — стандартный текст без имён; детали — только после входа.
+enum PsyAlertStatus {
+  open
+  in_progress
+  resolved
+}
+
+model PsyAlert {
+  id        String         @id @default(cuid())
+  caseId    String
+  case      PsyCase        @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  reason    String // обоснование критического риска (видно ТОЛЬКО в закрытом контуре)
+  status    PsyAlertStatus @default(open)
+  takenBy   String?
+  takenAt   DateTime?
+  createdAt DateTime       @default(now())
+
+  @@index([status])
+  @@index([caseId])
+}
+
 // ============ STAFF / HR ============
 
 model StaffMember {
@@ -765,8 +1001,91 @@ model StaffMember {
   email     String?
   hireDate  DateTime?
   isActive  Boolean  @default(true)
+  branchId  String? // филиал сотрудника (multi-branch)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ============ HR / КАДРЫ ============
+enum CandidateStatus {
+  reserve // резерв (резюме на будущее)
+  interview // приглашён на собеседование
+  offer // оффер
+  hired // принят
+  rejected
+}
+
+// Список требуемых вакансий.
+model Vacancy {
+  id         String   @id @default(cuid())
+  title      String // должность
+  department String?
+  count      Int      @default(1)
+  status     String   @default("open") // open | closed
+  branchId   String?
+  createdAt  DateTime @default(now())
+}
+
+// Резерв кандидатов (главная задача HR — копить резерв резюме).
+model Candidate {
+  id        String          @id @default(cuid())
+  fullName  String
+  phone     String?
+  email     String?
+  position  String // желаемая должность
+  status    CandidateStatus @default(reserve)
+  resumeKey String? // резюме в MinIO
+  note      String?
+  vacancyId String?
+  branchId  String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([status])
+}
+
+// Трудовой договор сотрудника.
+model StaffContract {
+  id        String    @id @default(cuid())
+  staffId   String // StaffMember.id или user.id
+  number    String
+  position  String
+  salary    Int // оклад
+  startDate DateTime?
+  endDate   DateTime?
+  status    String    @default("active")
+  branchId  String?
+  createdAt DateTime  @default(now())
+
+  @@index([staffId])
+}
+
+// Журнал зарплат.
+model SalaryRecord {
+  id        String    @id @default(cuid())
+  staffId   String
+  period    String // месяц
+  amount    Int
+  bonus     Int       @default(0)
+  paid      Boolean   @default(false)
+  paidAt    DateTime?
+  branchId  String?
+  createdAt DateTime  @default(now())
+
+  @@index([staffId])
+}
+
+// Отпуска / больничные.
+model LeaveRecord {
+  id        String   @id @default(cuid())
+  staffId   String
+  type      String // vacation | sick | unpaid
+  startDate DateTime
+  endDate   DateTime
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([staffId])
 }
 
 // ============ DOCUMENTS (полиморфно) ============
@@ -923,13 +1242,19 @@ model FeeInvoice {
 }
 
 model Payment {
-  id        String   @id @default(cuid())
-  invoiceId String
-  invoice   FeeInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  amount    Int
-  method    String?  // нал | карта | банк
-  paidAt    DateTime @default(now())
-  note      String?
+  id         String     @id @default(cuid())
+  invoiceId  String
+  invoice    FeeInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount     Int
+  method     String? // нал | карта | мбанк | банк
+  paidAt     DateTime   @default(now())
+  note       String?
+  // Верификация (UC бухгалтерии): колл-центр помечает «принято со слов», бухгалтер подтверждает.
+  verified   Boolean    @default(false)
+  verifiedBy String? // user.id бухгалтера
+  verifiedAt DateTime?
+  receiptKey String? // чек/квитанция в MinIO (доказательство)
+  recordedBy String? // кто внёс (колл-центр/бухгалтер)
 
   @@index([invoiceId])
 }
@@ -941,10 +1266,62 @@ model Expense {
   amount    Int
   date      DateTime
   authorId  String
+  branchId  String? // филиал расхода (multi-branch)
   createdAt DateTime @default(now())
 
   @@index([category])
   @@index([date])
+}
+
+// ============ ДОГОВОРЫ (приёмная) ============
+enum ContractStatus {
+  draft
+  active
+  completed
+  cancelled
+}
+
+model Contract {
+  id             String          @id @default(cuid())
+  number         String // номер договора
+  studentId      String
+  branchId       String?
+  year           String // учебный год, напр. «2026–2027»
+  baseAmount     Int // стоимость до скидки
+  discountPct    Int             @default(0)
+  discountNote   String? // за что скидка
+  amount         Int // итог со скидкой
+  prepaymentPct  Int             @default(0)
+  scheduleType   PaymentSchedule @default(monthly)
+  scheduleMonths Int             @default(9)
+  paymentDay     Int             @default(10) // день оплаты
+  representative Json? // {fio, inn, phone}
+  requisites     Json? // реквизиты школы (из филиала)
+  status         ContractStatus  @default(active)
+  prevContractId String? // история перезаключений
+  startDate      DateTime?
+  createdById    String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([studentId])
+  @@index([branchId])
+}
+
+// Резерв/очередь в класс (на первый класс ~100 человек в очереди).
+model ClassReserveEntry {
+  id          String   @id @default(cuid())
+  classId     String
+  leadId      String?
+  childName   String
+  parentPhone String?
+  position    Int      @default(0)
+  status      String   @default("waiting") // waiting | enrolled | cancelled
+  branchId    String?
+  note        String?
+  createdAt   DateTime @default(now())
+
+  @@index([classId, position])
 }
 
 // ============ KITCHEN / MEALS ============
@@ -1413,9 +1790,13 @@ model AdmissionLead {
   rejectReason      String?          @db.VarChar(1000)
   enrolledStudentId String? // Student.id после зачисления
   classId           String? // класс зачисления
+  branchId          String? // филиал (multi-branch)
+  sentToPsych       Boolean          @default(false) // отправлен на тестирование к психологу
+  psychCaseId       String? // PsyCase (PRE-тест), если создан
   createdById       String // user.id (секретарь/ассистент директора)
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
   @@index([stage, updatedAt])
+  @@index([branchId])
 }

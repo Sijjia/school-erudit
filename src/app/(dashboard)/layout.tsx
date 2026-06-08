@@ -24,6 +24,7 @@ import {
 } from '@mantine/core';
 import { EruditeLogo } from '@/shared/components/ui/EruditeLogo';
 import { UniversalSearch } from '@/shared/components/ui/UniversalSearch';
+import { BranchSelector } from '@/shared/components/ui/BranchSelector';
 import { useRole } from '@/shared/hooks/useRole';
 import {
   SIDEBAR_NAV,
@@ -242,6 +243,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Group>
 
             <Group gap="md">
+              <Box visibleFrom="sm"><BranchSelector /></Box>
               <Box visibleFrom="sm"><UniversalSearch /></Box>
               <Indicator
                 color="red" size={16} offset={4} disabled={agentCount === 0}

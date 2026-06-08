@@ -32,12 +32,15 @@ import {
   IconCalendarStats,
   IconCertificate,
   IconChartBar,
+  IconClockHour4,
   IconFileText,
   IconHeartbeat,
   IconPlus,
   IconTrash,
   IconUsers,
 } from '@tabler/icons-react';
+import { StudentTimeline } from './StudentTimeline';
+import { StudentContracts } from './StudentContracts';
 
 /* ── Colors ── */
 const SURFACE = '#ffffff';
@@ -573,6 +576,12 @@ export default function StudentProfilePage() {
       >
         <Tabs value={activeTab} onChange={setActiveTab}>
           <Tabs.List mb="md" style={{ flexWrap: 'wrap' }}>
+            <Tabs.Tab value="timeline" leftSection={<IconClockHour4 size={16} />}>
+              Лента
+            </Tabs.Tab>
+            <Tabs.Tab value="contracts" leftSection={<IconFileText size={16} />}>
+              Договоры
+            </Tabs.Tab>
             <Tabs.Tab value="grades" leftSection={<IconBook2 size={16} />}>
               Оценки
             </Tabs.Tab>
@@ -600,6 +609,14 @@ export default function StudentProfilePage() {
           </Tabs.List>
 
           {/* ── Grades tab ── */}
+          <Tabs.Panel value="timeline">
+            <StudentTimeline studentId={studentId} />
+          </Tabs.Panel>
+
+          <Tabs.Panel value="contracts">
+            <StudentContracts studentId={studentId} studentName={`${student.lastName} ${student.firstName}`} className={formatClassName(student.class)} />
+          </Tabs.Panel>
+
           <Tabs.Panel value="grades">
             {grades.length === 0 ? (
               <Box p="lg" style={{ textAlign: 'center' }}>

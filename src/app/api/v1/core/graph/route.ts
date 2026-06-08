@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
     const [
       studentCount, teacherCount, parentCount, gradeCount, invoiceCount,
       sessionCount, leadCount, mealCount, assetCount, libraryCount, agentItemCount, knowledgeCount,
+      psyCaseCount, contractCount, candidateCount, vacancyCount,
       classes, teachers, students,
     ] = await Promise.all([
       prisma.student.count(),
@@ -57,6 +58,10 @@ export async function GET(request: NextRequest) {
       prisma.libraryItem.count(),
       prisma.agentItem.count(),
       prisma.knowledgeDoc.count(),
+      prisma.psyCase.count(),
+      prisma.contract.count(),
+      prisma.candidate.count(),
+      prisma.vacancy.count(),
       prisma.class.findMany({
         select: { id: true, grade: true, letter: true, curatorId: true, _count: { select: { students: true } } },
         orderBy: [{ grade: 'asc' }, { letter: 'asc' }],
@@ -80,9 +85,12 @@ export async function GET(request: NextRequest) {
     const domains: Array<{ id: string; label: string; count: number; meta: string }> = [
       { id: 'd-journal', label: 'Журнал', count: gradeCount, meta: 'оценок в базе' },
       { id: 'd-people', label: 'Педагоги', count: teacherCount, meta: 'педагогов' },
-      { id: 'd-specialists', label: 'Психолог · Врач', count: sessionCount, meta: 'сессий специалистов' },
+      { id: 'd-specialists', label: 'Специалисты', count: sessionCount, meta: 'сессий специалистов' },
+      { id: 'd-psych', label: 'Психолог (eSPSMS)', count: psyCaseCount, meta: 'кейсов психолога' },
       { id: 'd-finance', label: 'Финансы', count: invoiceCount, meta: 'счетов' },
+      { id: 'd-contracts', label: 'Договоры', count: contractCount, meta: 'договоров' },
       { id: 'd-admission', label: 'Приёмная', count: leadCount, meta: 'заявок в воронке' },
+      { id: 'd-hr', label: 'Кадры (HR)', count: candidateCount + vacancyCount, meta: 'кандидатов и вакансий' },
       { id: 'd-agent', label: 'AI-агенты', count: agentItemCount, meta: 'сигналов агентов' },
       { id: 'd-knowledge', label: 'База знаний', count: knowledgeCount, meta: 'документов' },
       { id: 'd-kitchen', label: 'Столовая', count: mealCount, meta: 'заказов питания' },

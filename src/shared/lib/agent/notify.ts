@@ -1,6 +1,8 @@
 import { prisma } from '@/shared/lib/prisma';
 import { sendTelegram, isTelegramConfigured } from '@/shared/lib/agent/telegram';
 import { sendWebPush, isWebPushConfigured } from '@/shared/lib/agent/webpush';
+import { sendWhatsapp, isWhatsappConfigured } from '@/shared/lib/agent/whatsapp';
+import { sendSms, isSmsConfigured } from '@/shared/lib/agent/sms';
 
 /**
  * Канал-агностичный нотификатор. Источник правды — AgentItem (внутренний инбокс),
@@ -17,7 +19,6 @@ export async function notifyUser(userId: string | null | undefined, title: strin
         await sendTelegram(user.telegramChatId, `<b>${escapeHtml(title)}</b>\n${escapeHtml(body)}`);
       }
     }
-    // TODO(channels): WhatsApp / SMS адаптеры — по Parent.phone, когда подключим.
   } catch (e) {
     console.error('[notify] telegram failed:', e);
   }
@@ -27,6 +28,19 @@ export async function notifyUser(userId: string | null | undefined, title: strin
     }
   } catch (e) {
     console.error('[notify] webpush failed:', e);
+  }
+  // WhatsApp / SMS — по телефону родителя (фолбэк для тех, кто не в Telegram).
+  try {
+    if (isWhatsappConfigured() || isSmsConfigured()) {
+      const u = await prisma.user.findUnique({ where: { id: userId }, select: { parent: { select: { phone: true } } } });
+      const phone = u?.parent?.phone;
+      if (phone) {
+        if (isWhatsappConfigured()) await sendWhatsapp(phone, `${title}\n${body}`);
+        else if (isSmsConfigured()) await sendSms(phone, `${title}: ${body}`);
+      }
+    }
+  } catch (e) {
+    console.error('[notify] whatsapp/sms failed:', e);
   }
 }
 

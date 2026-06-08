@@ -17,7 +17,7 @@ const TYPE_COLOR: Record<string, string> = { event: 'blue', holiday: 'green', ex
 
 export default function CalendarPage() {
   return (
-    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'teacher', 'curator']}>
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary', 'teacher', 'curator']}>
       <ResourcePage
         title="Школьный календарь"
         icon={<IconCalendarEvent size={22} color="#228be6" />}

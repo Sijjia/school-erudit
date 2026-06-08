@@ -9,7 +9,7 @@ import { withAuth } from '@/shared/lib/api-auth';
  */
 export async function POST(request: NextRequest) {
   try {
-    const auth = await withAuth(request, { roles: ['super_admin', 'analyst', 'zavuch', 'accountant'] });
+    const auth = await withAuth(request, { roles: ['super_admin', 'analyst', 'zavuch', 'accountant', 'call_center'] });
     if (auth.response) return auth.response;
 
     const body = await request.json();
@@ -17,6 +17,9 @@ export async function POST(request: NextRequest) {
     const amount = parseInt(String(body.amount), 10);
     const method = body.method ? String(body.method) : null;
     const note = body.note ? String(body.note) : null;
+    // Платёж от бухгалтера/админа сразу верифицирован; от колл-центра — «со слов» (ждёт подтверждения).
+    const role = auth.session.user.role;
+    const preVerified = role !== 'call_center';
 
     if (!invoiceId) return errorResponse('VALIDATION_ERROR', 'Не указан счёт');
     if (!Number.isFinite(amount) || amount <= 0) return errorResponse('VALIDATION_ERROR', 'Сумма должна быть больше нуля');
@@ -29,7 +32,15 @@ export async function POST(request: NextRequest) {
     if (invoice.status === 'cancelled') return errorResponse('VALIDATION_ERROR', 'Счёт отменён');
 
     const updated = await prisma.$transaction(async (tx) => {
-      await tx.payment.create({ data: { invoiceId, amount, method, note } });
+      await tx.payment.create({
+        data: {
+          invoiceId, amount, method, note,
+          recordedBy: auth.session.user.id,
+          verified: preVerified,
+          verifiedBy: preVerified ? auth.session.user.id : null,
+          verifiedAt: preVerified ? new Date() : null,
+        },
+      });
       const paidBefore = invoice.payments.reduce((s, p) => s + p.amount, 0);
       const paidTotal = paidBefore + amount;
       const status = paidTotal >= invoice.amount ? 'paid' : paidTotal > 0 ? 'partial' : 'pending';

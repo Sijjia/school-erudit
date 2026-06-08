@@ -25,7 +25,8 @@ export async function GET(request: NextRequest) {
 
     // RBAC: staff видят любого; ученик — только себя; родитель — только своих детей.
     // Без этого любой залогиненный мог бы вытащить посещаемость чужого ребёнка по studentId.
-    const STAFF: string[] = ['super_admin', 'analyst', 'zavuch', 'secretary', 'teacher', 'curator'];
+    // doctor/specialist: медкабинет показывает уважительные/мед. пропуски — нужен read посещаемости.
+    const STAFF: string[] = ['super_admin', 'analyst', 'zavuch', 'secretary', 'teacher', 'curator', 'doctor', 'specialist'];
     if (!STAFF.includes(role)) {
       if (role === 'student') {
         const self = await prisma.student.findFirst({ where: { userId }, select: { id: true } });

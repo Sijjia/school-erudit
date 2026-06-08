@@ -24,6 +24,7 @@ import {
   IconReceipt,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
+import { ForecastCard } from './ForecastCard';
 import {
   Bar,
   BarChart,
@@ -99,6 +100,8 @@ function FinanceContent() {
         <Kpi label="Задолженность" value={fmtSom(data.totalRemaining)} color="orange" icon={<IconCoins size={22} />} />
         <Kpi label="Пени (текущие)" value={data.totalPenalty > 0 ? `+${fmtSom(data.totalPenalty)}` : '—'} color="red" icon={<IconAlertTriangle size={22} />} />
       </SimpleGrid>
+
+      <ForecastCard />
 
       <Grid gutter="md">
         {/* Собираемость */}

@@ -56,6 +56,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     }
     if (typeof body.rejectReason === 'string') data.rejectReason = body.rejectReason.slice(0, 1000);
     if (typeof body.classId === 'string') data.classId = body.classId;
+    if (stage === 'psych') data.sentToPsych = true; // отправлен на тестирование к психологу
 
     // ── Зачисление: лид становится учеником в ядре ──
     if (stage === 'enrolled' && !lead.enrolledStudentId) {
@@ -69,7 +70,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       const lastName = parts.slice(1).join(' ') || '—';
 
       const student = await prisma.student.create({
-        data: { firstName, lastName, classId, status: 'permanent' },
+        data: { firstName, lastName, classId, status: 'permanent', branchId: lead.branchId },
         select: { id: true },
       });
       data.enrolledStudentId = student.id;
@@ -91,6 +92,28 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         }
       } catch (err) {
         console.error('[admission] PRE psych note transfer failed:', err);
+      }
+
+      // PRE-тест: intake-кейс психолога со стартовой картиной (PRE/POST история).
+      try {
+        const psychNote = (data.psychNote as string) || lead.psychNote;
+        const psychologist = await prisma.user.findFirst({ where: { role: 'psychologist', isActive: true }, select: { id: true } });
+        if (psychNote && psychologist) {
+          const intake = await prisma.psyCase.create({
+            data: {
+              studentId: student.id, ownerId: psychologist.id,
+              title: 'Первичная диагностика (поступление)', reason: 'PRE-тест при поступлении',
+              isIntake: true, status: 'in_progress',
+            },
+            select: { id: true },
+          });
+          await prisma.psySession.create({
+            data: { caseId: intake.id, authorId: psychologist.id, type: 'primary_diagnosis', dapData: psychNote, isHumanVerified: true, verifiedAt: new Date() },
+          });
+          data.psychCaseId = intake.id;
+        }
+      } catch (err) {
+        console.error('[admission] intake PsyCase failed:', err);
       }
 
       // счета по графику оплат из договора (best-effort — зачисление важнее)

@@ -35,7 +35,9 @@ export async function GET(request: NextRequest) {
     // teacherId из query для них игнорируем — берём из сессии.
     if (role === 'teacher' || role === 'curator') {
       const scope = await getTeacherScope(userId);
-      if (!scope) return errorResponse('FORBIDDEN', 'Нет доступа', 403);
+      // Куратор/учитель без привязанного профиля педагога (напр. демо-куратор) —
+      // не ошибка доступа, просто нет «своих» замен: отдаём пустой список, а не 403.
+      if (!scope) return successResponse([]);
       where.OR = [
         { originalTeacherId: scope.teacherId },
         { substituteTeacherId: scope.teacherId },

@@ -27,6 +27,7 @@ const DEMO_PASSWORD = 'erudit2025';
 
 const ROLE_TABS = [
   { id: 'admin', label: 'Школа', login: 'admin', emoji: '🏫', color: '#1c7ed6' },
+  { id: 'secretary', label: 'Ассистент', login: 'secretary1', emoji: '🗂️', color: '#1098ad' },
   { id: 'teacher', label: 'Учитель', login: 'matematik', emoji: '👩‍🏫', color: '#7048e8' },
   { id: 'student', label: 'Ученик', login: 'student1', emoji: '🎒', color: '#0ca678' },
   { id: 'parent', label: 'Родитель', login: 'parent1', emoji: '👨‍👩‍👧', color: '#e8590c' },
@@ -37,7 +38,10 @@ const STAFF_TABS = [
   { id: 'accountant', label: 'Бухгалтер', login: 'accountant1', emoji: '💰', color: '#e8590c' },
   { id: 'psychologist', label: 'Психолог', login: 'psychologist1', emoji: '🧠', color: '#9c36b5' },
   { id: 'doctor', label: 'Врач', login: 'doctor1', emoji: '🩺', color: '#e03131' },
-  { id: 'hr', label: 'HR', login: 'hr1', emoji: '📋', color: '#2f9e44' },
+  { id: 'hr', label: 'HR (кадры)', login: 'hr1', emoji: '📋', color: '#2f9e44' },
+  { id: 'call_center', label: 'Колл-центр', login: 'callcenter1', emoji: '🎧', color: '#1971c2' },
+  { id: 'senior_psychologist', label: 'Ст. психолог', login: 'senior_psy', emoji: '🧩', color: '#ae3ec9' },
+  { id: 'safeguarding_lead', label: 'Безопасность', login: 'safeguard', emoji: '🛡️', color: '#e8590c' },
   { id: 'librarian', label: 'Библиотека', login: 'librarian1', emoji: '📚', color: '#1971c2' },
   { id: 'cook', label: 'Столовая', login: 'cook1', emoji: '🍲', color: '#f08c00' },
   { id: 'zavhoz', label: 'АХЧ', login: 'zavhoz1', emoji: '🔧', color: '#495057' },
