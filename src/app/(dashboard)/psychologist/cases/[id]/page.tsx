@@ -10,6 +10,7 @@ import {
 } from '@mantine/core';
 import { IconArrowLeft, IconBrain, IconCheck, IconPlus, IconMicrophone, IconWand, IconShieldLock } from '@tabler/icons-react';
 import { RoleGate } from '@/shared/components/auth/RoleGate';
+import { useRole } from '@/shared/hooks/useRole';
 import { fmtDate } from '@/shared/components/ui/resource-helpers';
 import { saveDraft, loadDraft, clearDraft, saveAudio, loadAudio, clearAudio } from '@/shared/lib/offline/draftStore';
 import { transcribeLocally, isTranscribeSupported } from '@/shared/lib/psy/localTranscribe';
@@ -21,7 +22,7 @@ const RISK = { green: { label: 'Зелёный', color: 'green' }, yellow: { lab
 const STATUS = { new: 'Новый', in_progress: 'В работе', paused: 'Приостановлен', closed: 'Закрыт' } as const;
 const STYPE_LABELS: Record<string, string> = {
   primary_diagnosis: 'Первичная диагностика', planned: 'Плановая встреча', emergency: 'Экстренная интервенция',
-  parent_meeting: 'Встреча с родителями', group: 'Групповая работа',
+  parent_meeting: 'Встреча с родителями', teacher_meeting: 'Встреча с учителями', group: 'Групповая работа',
 };
 
 interface Session {
@@ -38,10 +39,18 @@ interface PsyCase {
 
 function CaseDetail() {
   const { id } = useParams<{ id: string }>();
+  const { role } = useRole();
+  const isCoordinator = role === 'senior_psychologist' || role === 'super_admin';
   const [c, setC] = useState<PsyCase | null>(null);
   const [studentName, setStudentName] = useState('');
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+
+  // G5: назначение со-психолога координатором (старший психолог)
+  const [candidates, setCandidates] = useState<{ id: string; login: string; role: string }[]>([]);
+  const [collabUserIds, setCollabUserIds] = useState<string[]>([]);
+  const [assignUser, setAssignUser] = useState<string | null>(null);
+  const [assignBusy, setAssignBusy] = useState(false);
 
   // форма сессии
   const [type, setType] = useState('planned');
@@ -83,6 +92,27 @@ function CaseDetail() {
     setLoading(false);
   }, [id]);
   useEffect(() => { load(); }, [load]);
+
+  const loadCollab = useCallback(async () => {
+    if (!isCoordinator) return;
+    const j = await fetch(`/api/v1/psy/cases/${id}/collaborators`).then((r) => r.json()).catch(() => ({}));
+    if (j.success) {
+      setCandidates(j.data.candidates ?? []);
+      setCollabUserIds((j.data.collaborators ?? []).filter((x: { status: string }) => x.status === 'accepted').map((x: { userId: string }) => x.userId));
+    }
+  }, [id, isCoordinator]);
+  useEffect(() => { loadCollab(); }, [loadCollab]);
+
+  async function assignCollaborator() {
+    if (!assignUser) return;
+    setAssignBusy(true);
+    await fetch(`/api/v1/psy/cases/${id}/collaborators`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: assignUser }),
+    });
+    setAssignBusy(false); setAssignUser(null);
+    loadCollab();
+  }
 
   // офлайн-черновик: восстановить при открытии модалки
   async function openComposer() {
@@ -226,6 +256,30 @@ function CaseDetail() {
             onChange={(v) => v && patchCase({ status: v })} />
         </Group>
       </Group>
+
+      {isCoordinator && (
+        <Paper withBorder p="md" radius="md" bg="grape.0">
+          <Group justify="space-between" align="flex-end" wrap="wrap">
+            <div>
+              <Text size="sm" fw={600}>Назначить со-психолога (консилиум)</Text>
+              <Text size="xs" c="dimmed">Координатор подключает второго психолога к кейсу без согласия владельца.</Text>
+              {collabUserIds.length > 0 && (
+                <Group gap={4} mt={6}>
+                  {collabUserIds.map((uid) => {
+                    const u = candidates.find((x) => x.id === uid);
+                    return <Badge key={uid} variant="light" color="grape">{u?.login ?? uid}</Badge>;
+                  })}
+                </Group>
+              )}
+            </div>
+            <Group gap="xs" align="flex-end">
+              <Select w={220} placeholder="Выберите психолога" searchable value={assignUser} onChange={setAssignUser}
+                data={candidates.filter((u) => !collabUserIds.includes(u.id)).map((u) => ({ value: u.id, label: `${u.login} · ${u.role === 'senior_psychologist' ? 'старший' : u.role === 'specialist' ? 'специалист' : 'психолог'}` }))} />
+              <Button variant="light" color="grape" disabled={!assignUser} loading={assignBusy} onClick={assignCollaborator}>Назначить</Button>
+            </Group>
+          </Group>
+        </Paper>
+      )}
 
       <Group justify="space-between">
         <Title order={4}>Сессии ({c.sessions.length}) · раунд {c.courseRound ?? 1}</Title>

@@ -4,7 +4,7 @@ import { successResponse, errorResponse } from '@/shared/lib/api-response';
 import { withAuth } from '@/shared/lib/api-auth';
 import { getPsyScope, canAccessCase, CASE_OWNER_ROLES, PSY_CABINET_ROLES } from '@/shared/lib/psy-scope';
 
-const SESSION_TYPES = ['primary_diagnosis', 'planned', 'emergency', 'parent_meeting', 'group'];
+const SESSION_TYPES = ['primary_diagnosis', 'planned', 'emergency', 'parent_meeting', 'teacher_meeting', 'group'];
 
 /** GET /api/v1/psy/sessions?caseId= — сессии кейса (под RLS кейса). */
 export async function GET(request: NextRequest) {

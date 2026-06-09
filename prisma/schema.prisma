@@ -823,6 +823,7 @@ enum PsySessionType {
   planned
   emergency
   parent_meeting
+  teacher_meeting
   group
 }
 

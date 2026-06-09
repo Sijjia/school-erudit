@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   Group,
+  Loader,
   Modal,
   NumberInput,
   Paper,
@@ -19,7 +20,7 @@ import {
   Title,
   Tooltip,
 } from '@mantine/core';
-import { IconArrowRight, IconPhone, IconPlus, IconTrash, IconX } from '@tabler/icons-react';
+import { IconArrowRight, IconBrain, IconPhone, IconPlus, IconTrash, IconX } from '@tabler/icons-react';
 import { RoleGate } from '@/shared/components/auth/RoleGate';
 
 /**
@@ -46,7 +47,23 @@ interface Lead {
   paymentSchedule?: string | null;
   rejectReason?: string | null;
   enrolledStudentId?: string | null;
+  psychCaseId?: string | null;
   updatedAt: string;
+}
+
+const RISK_META: Record<string, { label: string; color: string }> = {
+  green: { label: 'Зелёный', color: 'green' },
+  yellow: { label: 'Жёлтый', color: 'yellow' },
+  red: { label: 'Красный', color: 'red' },
+};
+
+interface PsychConclusion {
+  riskLevel: string;
+  status: string;
+  summary: string;
+  assessment: string;
+  observation: string;
+  hasConclusion: boolean;
 }
 
 interface ClassOption {
@@ -83,6 +100,18 @@ export default function AdmissionPage() {
   const [moveLead, setMoveLead] = useState<Lead | null>(null);
   const [rejectLead, setRejectLead] = useState<Lead | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // G2: заключение психолога по intake-кейсу (видит приёмная)
+  const [conclLead, setConclLead] = useState<Lead | null>(null);
+  const [concl, setConcl] = useState<PsychConclusion | null>(null);
+  const [conclLoading, setConclLoading] = useState(false);
+
+  const openConclusion = async (lead: Lead) => {
+    setConclLead(lead); setConcl(null); setConclLoading(true);
+    const j = await fetch(`/api/v1/admission/${lead.id}/psych-conclusion`).then((r) => r.json()).catch(() => ({}));
+    setConclLoading(false);
+    if (j.success) setConcl(j.data);
+  };
 
   // форма создания
   const [form, setForm] = useState({ childName: '', targetGrade: 1, parentName: '', phone: '', source: 'Звонок' });
@@ -292,6 +321,18 @@ export default function AdmissionPage() {
                           в ядре: ученик создан
                         </Badge>
                       )}
+                      {lead.psychCaseId && (
+                        <Button
+                          size="compact-xs"
+                          variant="subtle"
+                          color="grape"
+                          mt={6}
+                          leftSection={<IconBrain size={12} />}
+                          onClick={() => openConclusion(lead)}
+                        >
+                          Заключение психолога
+                        </Button>
+                      )}
                     </Card>
                   ))}
                 </Stack>
@@ -449,6 +490,51 @@ export default function AdmissionPage() {
             <Button color="red" loading={busy} onClick={() => patchLead(rejectLead.id, { stage: 'rejected', ...stageFields })}>
               Зафиксировать отказ
             </Button>
+          </Stack>
+        )}
+      </Modal>
+
+      {/* Заключение психолога (intake) — для приёмной */}
+      <Modal
+        opened={!!conclLead}
+        onClose={() => setConclLead(null)}
+        title={conclLead ? `Заключение психолога — ${conclLead.childName}` : ''}
+        centered
+      >
+        {conclLoading ? (
+          <Group justify="center" p="md"><Loader /></Group>
+        ) : !concl ? (
+          <Text c="dimmed" size="sm">Заключение не найдено.</Text>
+        ) : !concl.hasConclusion ? (
+          <Stack gap="xs">
+            <Badge color={RISK_META[concl.riskLevel]?.color ?? 'gray'} variant="light">
+              Уровень: {RISK_META[concl.riskLevel]?.label ?? concl.riskLevel}
+            </Badge>
+            <Text c="dimmed" size="sm">Психолог ещё не завершил первичную диагностику — заключение появится позже.</Text>
+          </Stack>
+        ) : (
+          <Stack gap="sm">
+            <Badge color={RISK_META[concl.riskLevel]?.color ?? 'gray'} variant="light" size="lg">
+              Уровень: {RISK_META[concl.riskLevel]?.label ?? concl.riskLevel}
+            </Badge>
+            {concl.summary && (
+              <div>
+                <Text size="xs" fw={600} c="dimmed">Итог / вердикт</Text>
+                <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{concl.summary}</Text>
+              </div>
+            )}
+            {concl.assessment && (
+              <div>
+                <Text size="xs" fw={600} c="dimmed">Оценка психолога</Text>
+                <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{concl.assessment}</Text>
+              </div>
+            )}
+            {concl.observation && (
+              <div>
+                <Text size="xs" fw={600} c="dimmed">Наблюдения</Text>
+                <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{concl.observation}</Text>
+              </div>
+            )}
           </Stack>
         )}
       </Modal>
