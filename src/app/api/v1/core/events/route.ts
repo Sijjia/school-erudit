@@ -20,7 +20,7 @@ interface LiveEvent {
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await withAuth(request, { roles: ['super_admin', 'analyst', 'zavuch', 'secretary'] });
+    const auth = await withAuth(request, { roles: ['super_admin', 'analyst', 'zavuch', 'secretary', 'senior_psychologist', 'safeguarding_lead', 'psychologist', 'call_center', 'hr', 'accountant'] });
     if (auth.response) return auth.response;
 
     const { searchParams } = new URL(request.url);
@@ -88,6 +88,22 @@ export async function GET(request: NextRequest) {
       } else if (e.type === 'test.completed') {
         path = ['d-journal', 'school', ...(e.studentId ? [`s-${e.studentId}`] : [])];
         caption = `Тест пройден — ${sName}`;
+      } else if (e.type === 'psych.case.opened') {
+        path = ['d-psych', 'school', ...(classId ? [`c-${classId}`] : []), ...(e.studentId ? [`s-${e.studentId}`] : [])];
+        caption = `🧠 Психолог открыл кейс — ${sName}${sClass ? `, ${sClass}` : ''}`;
+      } else if (e.type === 'safeguard.alert') {
+        // слепое событие: без имён (приватность ТЗ) — путь только домен → ядро
+        path = ['d-safeguard', 'school'];
+        caption = '🔒 Safeguarding: критический сигнал — координатору';
+      } else if (e.type === 'callcenter.promise') {
+        path = ['d-callcenter', 'd-finance', 'school', ...(e.studentId ? [`s-${e.studentId}`] : [])];
+        caption = `🎧 Колл-центр: обещание оплаты — ${sName}`;
+      } else if (e.type === 'contract.created') {
+        path = ['d-contracts', 'd-finance', 'school', ...(e.studentId ? [`s-${e.studentId}`] : [])];
+        caption = `📄 Договор оформлен — ${sName}`;
+      } else if (e.type === 'hr.candidate.added') {
+        path = ['d-hr', 'school'];
+        caption = '📋 HR: новый кандидат в резерве';
       }
 
       return { id: e.id, type: e.type, path, caption, at: e.createdAt.toISOString() };

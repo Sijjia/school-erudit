@@ -37,13 +37,13 @@ const MAX_PARENTS = 40;
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await withAuth(request, { roles: ['super_admin', 'analyst', 'zavuch', 'secretary'] });
+    const auth = await withAuth(request, { roles: ['super_admin', 'analyst', 'zavuch', 'secretary', 'senior_psychologist', 'safeguarding_lead', 'psychologist', 'call_center', 'hr', 'accountant'] });
     if (auth.response) return auth.response;
 
     const [
       studentCount, teacherCount, parentCount, gradeCount, invoiceCount,
       sessionCount, leadCount, mealCount, assetCount, libraryCount, agentItemCount, knowledgeCount,
-      psyCaseCount, contractCount, candidateCount, vacancyCount,
+      psyCaseCount, contractCount, candidateCount, vacancyCount, psyAlertCount, promiseCount,
       classes, teachers, students,
     ] = await Promise.all([
       prisma.student.count(),
@@ -62,6 +62,8 @@ export async function GET(request: NextRequest) {
       prisma.contract.count(),
       prisma.candidate.count(),
       prisma.vacancy.count(),
+      prisma.psyAlert.count(),
+      prisma.studentNote.count({ where: { type: 'promise' } }),
       prisma.class.findMany({
         select: { id: true, grade: true, letter: true, curatorId: true, _count: { select: { students: true } } },
         orderBy: [{ grade: 'asc' }, { letter: 'asc' }],
@@ -87,7 +89,9 @@ export async function GET(request: NextRequest) {
       { id: 'd-people', label: 'Педагоги', count: teacherCount, meta: 'педагогов' },
       { id: 'd-specialists', label: 'Специалисты', count: sessionCount, meta: 'сессий специалистов' },
       { id: 'd-psych', label: 'Психолог (eSPSMS)', count: psyCaseCount, meta: 'кейсов психолога' },
+      { id: 'd-safeguard', label: 'Безопасность', count: psyAlertCount, meta: 'safeguarding-сигналов' },
       { id: 'd-finance', label: 'Финансы', count: invoiceCount, meta: 'счетов' },
+      { id: 'd-callcenter', label: 'Колл-центр', count: promiseCount, meta: 'обещаний оплаты' },
       { id: 'd-contracts', label: 'Договоры', count: contractCount, meta: 'договоров' },
       { id: 'd-admission', label: 'Приёмная', count: leadCount, meta: 'заявок в воронке' },
       { id: 'd-hr', label: 'Кадры (HR)', count: candidateCount + vacancyCount, meta: 'кандидатов и вакансий' },
@@ -100,6 +104,20 @@ export async function GET(request: NextRequest) {
     for (const d of domains) {
       nodes.push({ id: d.id, label: d.label, type: 'domain', val: 12, count: d.count, meta: `${d.count} ${d.meta}` });
       links.push({ source: 'school', target: d.id });
+    }
+
+    // Меж-доменные связи — реальная взаимосвязь ролей (не просто звезда вокруг ядра):
+    const domainIds = new Set(domains.map((d) => d.id));
+    const crossLinks: GraphLink[] = [
+      { source: 'd-callcenter', target: 'd-finance' },   // колл-центр обзванивает должников → финансы
+      { source: 'd-safeguard', target: 'd-psych' },      // safeguarding-сигналы рождаются в психо-кейсах
+      { source: 'd-contracts', target: 'd-finance' },    // договор → счета
+      { source: 'd-admission', target: 'd-contracts' },  // приёмка → договор
+      { source: 'd-admission', target: 'd-psych' },      // приёмка → входной тест психолога
+      { source: 'd-hr', target: 'd-people' },            // HR нанимает педагогов
+    ];
+    for (const l of crossLinks) {
+      if (domainIds.has(l.source) && domainIds.has(l.target)) links.push(l);
     }
 
     // Классы → к ядру

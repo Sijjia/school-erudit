@@ -4,6 +4,7 @@ import { successResponse, errorResponse } from '@/shared/lib/api-response';
 import { withAuth } from '@/shared/lib/api-auth';
 import { getPsyScope, caseWhereForScope, CASE_OWNER_ROLES, PSY_CABINET_ROLES } from '@/shared/lib/psy-scope';
 import { emitSafeguardingAlert } from '@/shared/lib/psy-safeguarding';
+import { emitEvent } from '@/shared/lib/agent/engine';
 
 /** GET /api/v1/psy/cases?studentId=&status=&riskLevel= — список кейсов под RLS. */
 export async function GET(request: NextRequest) {
@@ -63,6 +64,8 @@ export async function POST(request: NextRequest) {
     });
     // UC-5: красный риск → слепой safeguarding-алерт координаторам.
     if (risk === 'red') await emitSafeguardingAlert(created.id, riskJustification!.trim());
+    // Ядро: импульс «психолог открыл кейс» в нейро-граф (live-событие).
+    await emitEvent('psych.case.opened', { actorUserId: auth.session.user.id, studentId, payload: { caseId: created.id, risk } });
     return successResponse(created, 201);
   } catch (e) {
     console.error('POST psy/cases error:', e);

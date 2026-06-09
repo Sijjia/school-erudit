@@ -91,6 +91,18 @@ export async function resolveScope(user: SessionUser): Promise<AssistantScope> {
     case 'psychologist':
       return { ...base, allowedClassIds: 'all', allowedStudentIds: 'all', canSeeFinance: false, canSeePsych: true, allowedSpecialistKinds: ['psych'], canSeeSchoolStats: true };
 
+    case 'senior_psychologist':
+      // старший психолог: весь психо-домен + школьная статистика (конструктор, дашборд)
+      return { ...base, allowedClassIds: 'all', allowedStudentIds: 'all', canSeeFinance: false, canSeePsych: true, allowedSpecialistKinds: ['psych'], canSeeSchoolStats: true };
+
+    case 'safeguarding_lead':
+      // координатор безопасности: видит психо-контекст для реагирования на алерты + статистику
+      return { ...base, allowedClassIds: 'all', allowedStudentIds: 'all', canSeeFinance: false, canSeePsych: true, allowedSpecialistKinds: ['psych'], canSeeSchoolStats: true };
+
+    case 'call_center':
+      // колл-центр: финансовый домен (должники/обещания), без психо-данных
+      return { ...base, allowedClassIds: 'all', allowedStudentIds: 'all', canSeeFinance: true, canSeePsych: false, allowedSpecialistKinds: [], canSeeSchoolStats: true };
+
     case 'doctor':
       return { ...base, allowedClassIds: 'all', allowedStudentIds: 'all', canSeeFinance: false, canSeePsych: true, allowedSpecialistKinds: ['medical'], canSeeSchoolStats: true };
 

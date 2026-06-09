@@ -1,5 +1,6 @@
 import { prisma } from '@/shared/lib/prisma';
 import { notifyUser } from '@/shared/lib/agent/notify';
+import { emitEvent } from '@/shared/lib/agent/engine';
 
 /**
  * Safeguarding (UC-5): при критическом (красном) риске создаём алерт и шлём
@@ -23,6 +24,8 @@ export async function emitSafeguardingAlert(caseId: string, reason: string): Pro
       select: { id: true },
     });
     await Promise.all(coords.map((u) => notifyUser(u.id, BLIND_TITLE, BLIND_BODY)));
+    // Ядро: слепой импульс в нейро-граф (без ФИО — приватность ТЗ).
+    await emitEvent('safeguard.alert', { payload: { caseId } });
   } catch (e) {
     console.error('emitSafeguardingAlert failed:', e);
   }

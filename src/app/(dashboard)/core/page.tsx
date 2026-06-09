@@ -215,7 +215,7 @@ export default function CoreGraphPage() {
   }, []);
 
   return (
-    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary']}>
+    <RoleGate roles={['super_admin', 'analyst', 'zavuch', 'secretary', 'senior_psychologist', 'safeguarding_lead', 'psychologist', 'call_center', 'hr', 'accountant']}>
       <Stack gap="md">
         <Group justify="space-between" align="flex-end">
           <Box>

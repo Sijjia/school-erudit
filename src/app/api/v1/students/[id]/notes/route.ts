@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/shared/lib/prisma';
 import { successResponse, errorResponse } from '@/shared/lib/api-response';
 import { withAuth } from '@/shared/lib/api-auth';
+import { emitEvent } from '@/shared/lib/agent/engine';
 
 const STAFF_NOTE_ROLES = ['super_admin', 'analyst', 'zavuch', 'secretary', 'teacher', 'curator', 'accountant', 'call_center', 'hr', 'doctor'] as const;
 
@@ -38,6 +39,10 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
         meta: (meta as object) ?? undefined,
       },
     });
+    // Ядро: обещание оплаты от колл-центра → live-импульс колл-центр → финансы.
+    if (note.type === 'promise') {
+      await emitEvent('callcenter.promise', { actorUserId: auth.session.user.id, studentId: id, payload: { noteId: note.id } });
+    }
     return successResponse(note, 201);
   } catch (e) {
     console.error('POST student notes error:', e);

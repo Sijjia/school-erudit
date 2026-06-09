@@ -62,9 +62,12 @@ function landingForRole(role?: string): string {
   // узкие роли сотрудников — сразу в свой кабинет
   const staffHome: Record<string, string> = {
     accountant: '/workspace/accounting',
-    psychologist: '/workspace/psychologist',
+    psychologist: '/psychologist',
+    senior_psychologist: '/psychologist/overview',
+    safeguarding_lead: '/safeguarding',
+    call_center: '/call-center',
     doctor: '/workspace/medical',
-    hr: '/staff',
+    hr: '/hr',
     librarian: '/library',
     cook: '/workspace/kitchen',
     zavhoz: '/workspace/maintenance',
